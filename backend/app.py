@@ -25,8 +25,7 @@ MAX_CODE_LEN = 20_000    # reject absurdly large payloads before spawning anythi
 ALLOWED_ORIGINS = [
     "http://localhost:8000", "http://127.0.0.1:8000",
     "http://localhost:5500", "http://127.0.0.1:5500",
-    # TODO: add the GitHub Pages origin once the site is published, e.g.
-    # "https://<username>.github.io",
+    "https://uddaloksarkar.github.io",   # GitHub Pages (float-faults repo)
 ]
 
 
