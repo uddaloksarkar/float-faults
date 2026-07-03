@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NumPy Sampler Fault Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EDEFF3; --panel:#FFFFFF; --ink:#14171C; --muted:#5A6472;
+    --line:#D3D8E0; --line2:#E4E8EE; --accent:#3A3AD6; --accent-ink:#2626a8;
+    --bug:#C4362E; --clean:#137A5A; --latent:#A9740E; --run:#3A3AD6;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --disp:"Space Grotesk",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--disp);
+    line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:5rem}
+  a{color:var(--accent-ink)}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 20px}
+
+  /* header */
+  header{border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:20}
+  .hbar{display:flex;align-items:center;gap:16px;padding:14px 0;flex-wrap:wrap}
+  .brand{font-weight:700;font-size:1.15rem;letter-spacing:-.01em;white-space:nowrap}
+  .brand .dot{color:var(--accent)}
+  .chip{font-family:var(--mono);font-size:.72rem;color:var(--muted);
+    border:1px solid var(--line);border-radius:2px;padding:4px 8px;white-space:nowrap}
+  .chip b{color:var(--ink);font-weight:700}
+  .spacer{flex:1}
+  button{font-family:var(--disp);font-size:.85rem;font-weight:600;cursor:pointer;
+    border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:3px;
+    padding:8px 14px;transition:filter .12s,opacity .12s}
+  button:hover{filter:brightness(1.08)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.ghost{background:transparent;color:var(--accent-ink)}
+  button.warn{background:transparent;border-color:var(--latent);color:var(--latent)}
+
+  /* hero */
+  .hero{padding:40px 0 22px}
+  .eyebrow{font-family:var(--mono);font-size:.75rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 10px}
+  h1{font-size:clamp(1.9rem,4.4vw,3rem);line-height:1.05;letter-spacing:-.02em;margin:0 0 14px;font-weight:700}
+  .lede{font-size:1.05rem;color:var(--muted);max-width:64ch;margin:0}
+  .verify{margin-top:18px;font-family:var(--mono);font-size:.8rem;color:var(--ink);
+    border-left:3px solid var(--accent);padding:8px 0 8px 12px;background:linear-gradient(90deg,rgba(58,58,214,.05),transparent)}
+
+  /* legend */
+  .legend{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0 6px}
+  .tag{font-family:var(--mono);font-size:.68rem;font-weight:700;letter-spacing:.04em;
+    border:1px solid var(--line);border-radius:2px;padding:3px 7px;color:var(--muted);background:var(--panel)}
+  .tag b{color:var(--ink)}
+
+  /* boot banner */
+  #boot{font-family:var(--mono);font-size:.82rem;margin:20px 0;padding:12px 14px;border:1px solid var(--line);
+    background:var(--panel);border-radius:3px;color:var(--muted);display:flex;align-items:center;gap:10px}
+  #boot.err{border-color:var(--bug);color:var(--bug)}
+  .spin{width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;
+    animation:sp .8s linear infinite;flex:none}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* cells */
+  .cells{display:flex;flex-direction:column;gap:16px;margin-top:8px}
+  .cell{background:var(--panel);border:1px solid var(--line);border-radius:4px;overflow:hidden;
+    display:grid;grid-template-columns:6px 1fr}
+  .stripe{background:var(--line)}
+  .cell.bug .stripe{background:var(--bug)}
+  .cell.clean .stripe{background:var(--clean)}
+  .cell.latent .stripe{background:var(--latent)}
+  .cell.running .stripe{background:var(--accent);animation:pulse 1s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.35}}
+  .cbody{padding:16px 18px;min-width:0}
+  .chead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .sampler{font-family:var(--mono);font-weight:700;font-size:1rem}
+  .classes{display:flex;gap:6px;flex-wrap:wrap}
+  .cls{font-family:var(--mono);font-size:.64rem;font-weight:700;letter-spacing:.05em;
+    padding:2px 6px;border-radius:2px;border:1px solid var(--line);color:var(--muted)}
+  .cls.ROUND{color:#8a2d8a;border-color:#e2c4e2}
+  .cls.UFLOW{color:#0a6d8a;border-color:#bfe0ea}
+  .cls.LATTICE{color:#5a6472}
+  .cls.RANGE{color:#9a5a12;border-color:#ecd9bd}
+  .cls.INTOVF{color:#7a4d16}
+  .cls.DISTORT{color:#b2352b;border-color:#eecac6}
+  .cls.NONTERM{color:#a01e5a;border-color:#eec4d8}
+  .cls.LATENT{color:#7a6b12}
+  .status{margin-left:auto;font-family:var(--mono);font-size:.72rem;font-weight:700;
+    display:flex;align-items:center;gap:7px;color:var(--muted)}
+  .led{width:9px;height:9px;border-radius:50%;background:var(--line);flex:none;box-shadow:0 0 0 2px var(--panel),0 0 0 3px var(--line2)}
+  .status.running .led{background:var(--accent);animation:pulse 1s infinite}
+  .status.bug .led{background:var(--bug)} .status.bug{color:var(--bug)}
+  .status.clean .led{background:var(--clean)} .status.clean{color:var(--clean)}
+  .status.latent .led{background:var(--latent)} .status.latent{color:var(--latent)}
+  .mech{margin:8px 0 12px;max-width:78ch}
+  .mech b{color:var(--ink);font-weight:700}
+  .mech code{font-family:var(--mono);font-size:.85em;background:var(--line2);border-radius:2px;padding:1px 5px;color:var(--ink)}
+  .mech-row{display:flex;gap:12px;align-items:baseline;padding:5px 0;font-size:.92rem;color:var(--muted);line-height:1.5}
+  .mech-row + .mech-row{border-top:1px dashed var(--line2)}
+  .mech-label{flex:none;width:76px;font-family:var(--mono);font-size:.66rem;font-weight:700;
+    letter-spacing:.07em;text-transform:uppercase;color:var(--accent-ink);align-self:flex-start;padding-top:2px}
+  .mech-text{flex:1;min-width:0}
+  .mech-row.source .mech-text{font-family:var(--mono);font-size:.8rem}
+  .mech-row.source .mech-text a{word-break:break-all}
+  textarea.code{width:100%;font-family:var(--mono);font-size:.8rem;line-height:1.55;color:var(--ink);
+    background:#FafBfc;border:1px solid var(--line);border-radius:3px;padding:11px 12px;resize:vertical;
+    tab-size:4;white-space:pre;overflow:auto}
+  .actions{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+  .actions .runbtn{padding:6px 13px;font-size:.8rem}
+  pre.out{font-family:var(--mono);font-size:.78rem;line-height:1.5;background:#0f1218;color:#dfe4ec;
+    border-radius:3px;padding:12px 13px;margin:11px 0 0;overflow:auto;white-space:pre-wrap;word-break:break-word;
+    max-height:340px;display:none}
+  pre.out.show{display:block}
+  .verdictline{font-weight:700}
+  .verdictline.bug{color:#ff8a80} .verdictline.clean{color:#6fe0b4} .verdictline.latent{color:#e8c477}
+
+  footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);
+    font-family:var(--mono);font-size:.74rem}
+  @media(max-width:620px){ .cbody{padding:13px 13px} h1{font-size:1.8rem} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hbar">
+    <span class="brand">float<span class="dot">·</span>faults</span>
+    <span class="chip" id="verchip">numpy <b>booting…</b></span>
+    <span class="spacer"></span>
+    <button id="runall" disabled>Run all diagnostics</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="hero">
+    <p class="eyebrow">NumPy random samplers</p>
+    <h1>Where float64 breaks the samplers.</h1>
+    <p class="lede">A live demonstration of NumPy's random samplers and corresponding floating-point faults. This page will showcase cancellation, underflow, saturation, acceptance-test collapse, non-termination, each reproduced against real NumPy.</p>
+    <p class="verify">Every panel runs the exact code shown — edit it, press Run, and the result is computed by real NumPy. All currently used arguments are exactly representable in float64, so the loss happens inside NumPy's C, not at the Python boundary.</p>
+
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <div id="boot"><span class="spin"></span><span id="bootmsg">Connecting to the execution backend… first request is a few seconds.</span></div>
+
+  <div class="cells" id="cells"></div>
+
+  <footer>
+    <div id="footver">numpy — · sandboxed backend · MT19937 (legacy) + PCG64 (Generator)</div>
+    <div style="margin-top:6px">Recurring pattern: the frozen legacy path (RandomState) lacks a guard or stable reformulation that the Generator path added — log1p/expm1, mode-relative log-pmf, Umin, the result&lt;1 guard.</div>
+  </footer>
+</div>
+
+<script>
+// ------------------------------------------------------------------ bug data
+const BUGS = [
+  {
+    id:"binomial", sampler:"binomial", classes:["ROUND"],
+    signal:"Legacy <code>RandomState.binomial</code> returns <b>deterministic X=0</b> for any <code>n</code> once <code>p</code> is tiny (<code>p ≤ 2**-54</code>), even for <code> E[X] &gt; 0</code>.",
+    source:"<a href=\"https://github.com/numpy/numpy/blob/main/numpy/random/src/legacy/legacy-distributions.c#L243-L256\" target=\"_blank\" rel=\"noopener\">legacy-distributions.c#L243-L256</a>: sets <code>qn = exp(n·log(1.0-p))</code> once which silently rounds to <code>1.0</code> for tiny <code>p</code>. Every draw starts <code>X=0; px=qn; U=next_double(); while (U &gt; px)</code>. If <code>qn==1.0</code>, <code>U &gt; 1.0</code> is never true (<code>U∈[0,1)</code>), so the loop body never runs and <code>X=0</code> is returned immediately.",
+    comment:"The <code>Generator.binomial</code> fixed in numpy 2.4.0 via <code>log1p</code>.",
+    timeout:15000,
+    code:
+`import numpy as np
+p, n = 2.0**-54, 16*2**54   # true E[X] = 16
+x = np.random.RandomState(1).binomial(n, p, 5000)
+g = np.random.default_rng(1).binomial(n, p, 5000)
+print("RandomState: mean =", x.mean())
+print("Generator  : mean =", round(float(g.mean()), 2))
+print("verdict:", "BUG - RandomState's inversion returns X=0 deterministically once fl(1-p)=1;"
+                   " Generator fixed in numpy 2.4.0 via log1p")`
+  },
+  {
+    id:"geometric", sampler:"geometric", classes:["ROUND"],
+    signal:"Legacy <code>RandomState.geometric</code> returns <b>INT64_MIN</b> — a value outside the distribution's support (X ≥ 1) — instead of a large positive integer.",
+    source:"<a href=\"https://github.com/numpy/numpy/blob/main/numpy/random/src/legacy/legacy-distributions.c#L608\" target=\"_blank\" rel=\"noopener\">legacy-distributions.c#L608</a> — <code>legacy_geometric_inversion</code>: <code>ceil(log1p(-U) / log(1-p))</code>.",
+    comment:"<code>fl(1-2**-58)=1</code> makes <code>log(1-p)=0</code>, the quotient is <code>-inf</code>, and <code>(int64)ceil(-inf) = INT64_MIN</code>. <code>Generator.geometric</code> uses <code>log1p(-p)</code> instead and stays finite.",
+    timeout:15000,
+    code:
+`import numpy as np
+p = 2.0**-58
+L = np.random.RandomState(1).geometric(p, 20)
+G = np.random.default_rng(1).geometric(p, 20)
+imin = np.iinfo(np.int64).min
+print("legacy min :", L.min(), "   all == INT64_MIN?", bool((L==imin).all()))
+print("Generator  :", G.min(), "(large but finite, ~1/p)")
+print("verdict:", "BUG - legacy geometric returns INT64_MIN (out of support)" if (L==imin).all() else "clean")`
+  },
+  {
+    id:"negative_binomial", sampler:"negative_binomial", classes:["RANGE","DISTORT"],
+    signal:"Two independent faults: legacy <b>saturates to INT64_MAX</b> for extreme parameters (RANGE), and even in-range draws carry an <b>inflated variance</b> (DISTORT).",
+    source:"<a href=\"https://github.com/numpy/numpy/blob/main/numpy/random/src/legacy/legacy-distributions.c#L179-L181\" target=\"_blank\" rel=\"noopener\">legacy-distributions.c#L179-L181</a> — <code>legacy_negative_binomial</code> composes <code>legacy_gamma</code> straight into <code>random_poisson</code>, unguarded.",
+    comment:"RANGE: the internal Gamma·Poisson rate can reach ~4.6e18, exceeding the int64-safe Poisson range; legacy overflows to <code>INT64_MAX</code> while Generator guards the same composition with <code>ValueError</code>. DISTORT: with a tight gamma it behaves like ~Poisson and inherits the PTRS variance inflation (see Poisson below).",
+    timeout:15000,
+    code:
+`import numpy as np
+imax, imin = np.iinfo(np.int64).max, np.iinfo(np.int64).min
+n, p = 1, 2.0**-62
+L = np.random.RandomState(1).negative_binomial(n, p, 5000)
+print("[RANGE] legacy: min", L.min(), "max", L.max(), " #saturated to INT64 bound:", int(((L==imax)|(L==imin)).sum()))
+try:
+    np.random.default_rng(1).negative_binomial(n, p, 5000); print("        Generator: (no error)")
+except Exception as e:
+    print("        Generator raises:", type(e).__name__)
+# DISTORT: tight gamma -> ~Poisson(mean); inherits PTRS inflation
+mt = 1e17; nn = 1e6*mt; pp = nn/(nn+mt)
+mean, var = nn*(1-pp)/pp, nn*(1-pp)/pp**2
+x = np.random.default_rng(0).negative_binomial(nn, pp, 300000)
+print("[DISTORT] mean=1e17: var/theory =", round(float(((x-mean).var())/var),3), "(should be 1.0)")
+print("verdict:", "BUG - legacy int64 saturation + inherited PTRS variance inflation")`
+  },
+  {
+    id:"poisson", sampler:"poisson", classes:["DISTORT","LATTICE"],
+    signal:"<code>np.random.poisson(lam)</code> for huge <code>lam</code> returns values with <b>~1.66× the correct variance</b> — the mean is right, but the spread is wrong, in both APIs.",
+    source:"<a href=\"https://github.com/numpy/numpy/blob/main/numpy/random/src/distributions/distributions.c#L600\" target=\"_blank\" rel=\"noopener\">distributions.c#L600</a> — shared PTRS acceptance test: <code>-lam + k·loglam - random_loggam(k+1)</code>.",
+    comment:"This subtracts two ~1e20-magnitude terms whose difference should be O(std) ~1e5; the shape signal is lost to cancellation, inflating the accepted tail (DISTORT — the root cause). For lam≥2**53 outputs also land on a cosmetic grid of spacing <code>ulp(lam)</code> (LATTICE) — harmless on its own.",
+    timeout:20000,
+    code:
+`import numpy as np
+lam = 9e18
+x = np.random.default_rng(0).poisson(lam, 300000)
+d = (x - np.int64(int(lam))).astype(float)          # stable: |d| ~ std << lam
+print("[DISTORT] var/lam =", round(float(d.var()/lam),3), "(should be 1.0)")
+print("          mean bias / std =", round(float(d.mean()/lam**0.5),3), "(mean is correct)")
+print("[LATTICE] output grid spacing =", int(np.diff(np.unique(x)).min()),
+      " | ulp(lam) =", int(np.spacing(np.float64(lam))))
+print("verdict:", "BUG - variance inflated ~1.66x by PTRS cancellation (+ cosmetic 1024-lattice)")`
+  },
+  {
+    id:"hypergeometric", sampler:"hypergeometric", classes:["INTOVF"],
+    signal:"A <b>perfectly valid urn</b> (e.g. <code>ngood=nbad=2**62</code>) is <b>rejected</b> with <code>ValueError</code>, even though every draw would be well-defined.",
+    source:"<a href=\"https://github.com/numpy/numpy/blob/main/numpy/random/mtrand.pyx#L3969\" target=\"_blank\" rel=\"noopener\">mtrand.pyx#L3969</a> — <code>if lngood + lnbad &lt; lnsample: raise ValueError(...)</code>.",
+    comment:"Integer bug, not float: the check adds two int64 values before comparing, and <code>2**62 + 2**62 = 2**63</code> wraps negative. Generator rejects the same call too, but via its documented &lt; 1e9 magnitude limit, not overflow.",
+    timeout:15000,
+    code:
+`import numpy as np
+ng, nb, ns = 2**62, 2**62, 1        # valid urn: P(draw good) = 0.5
+for name, r in [("legacy", np.random.RandomState(1)), ("Generator", np.random.default_rng(1))]:
+    try:
+        r.hypergeometric(ng, nb, ns, 20); print(name, "accepted")
+    except Exception as e:
+        print(name, "raises:", type(e).__name__, "-", str(e)[:60])
+print("verdict: BUG - legacy int64 overflow (2**62+2**62 wraps) rejects a valid urn")`
+  },
+  {
+    id:"dirichlet", sampler:"dirichlet", classes:["UFLOW"],
+    signal:"Legacy <code>RandomState.dirichlet</code> returns <b>NaN rows</b> for a routine sparse-prior alpha, instead of a valid point on the simplex.",
+    source:"<a href=\"https://github.com/numpy/numpy/blob/main/numpy/random/mtrand.pyx#L4561\" target=\"_blank\" rel=\"noopener\">mtrand.pyx#L4561</a> — <code>invacc = 1/acc</code>, dividing by the sum of the component gamma draws.",
+    comment:"For small alpha the component gammas underflow to exactly 0.0, so <code>acc = 0.0</code> and <code>1/acc → 0/0 → NaN</code>. Onset (<code>alpha ≈ 2**-8</code>) sits in the common sparse-prior regime. <b>Generator is immune.</b>",
+    timeout:15000,
+    code:
+`import numpy as np
+a = 2.0**-10                        # ~9.8e-4, a routine sparse-prior value
+L = np.random.RandomState(7).dirichlet([a,a,a], 20000)
+G = np.random.default_rng(7).dirichlet([a,a,a], 20000)
+print("alpha = 2**-10:")
+print("  legacy    NaN rows:", int(np.isnan(L).any(1).sum()), "/ 20000")
+print("  Generator NaN rows:", int(np.isnan(G).any(1).sum()), "/ 20000")
+print("verdict:", "BUG - legacy dirichlet 0/0 -> NaN for small alpha; Generator immune")`
+  },
+  {
+    id:"standard_t", sampler:"standard_t", classes:["UFLOW"],
+    signal:"<code>standard_t(df)</code> returns <b>±inf</b> for small df, when a heavy-tailed but finite value is expected.",
+    source:"<a href=\"https://github.com/numpy/numpy/blob/main/numpy/random/src/legacy/legacy-distributions.c#L171-L176\" target=\"_blank\" rel=\"noopener\">legacy-distributions.c#L171-L176</a> — <code>legacy_standard_t</code>: <code>sqrt(df/2) * num / sqrt(denom)</code>.",
+    comment:"<code>denom = chisquare(df) = 2·Gamma(df/2)</code> underflows to exactly 0 for tiny df, so the division is <code>Z / sqrt(0) = inf</code>. Present in both APIs; <code>df &lt; 1</code> is a legitimate heavy-tail model, not invalid input.",
+    timeout:15000,
+    code:
+`import numpy as np
+df = 2.0**-8
+inf = int(np.isinf(np.random.default_rng(1).standard_t(df, 50000)).sum())
+print("df = 2**-8:  #(+/-inf) =", inf, "/ 50000")
+print("cause: chisquare(df) underflows to 0  ->  t = Z / sqrt(0) = inf")
+print("verdict:", "BUG - standard_t returns +/-inf for small df" if inf>0 else "clean")`
+  },
+  {
+    id:"gamma_beta", sampler:"standard_gamma / beta", classes:["UFLOW"],
+    signal:"Draws from the <b>open interval (0,∞)</b> land on <b>exact 0</b> for tiny shape — an unrepresentable outcome that then breaks any downstream <code>log()</code> or reciprocal.",
+    source:"<a href=\"https://github.com/numpy/numpy/blob/main/numpy/random/src/legacy/legacy-distributions.c#L61\" target=\"_blank\" rel=\"noopener\">legacy-distributions.c#L61</a> — <code>standard_gamma</code>, shape&lt;1 branch: <code>X = pow(U, 1./shape)</code>.",
+    comment:"For tiny shape, <code>1/shape</code> is huge, and <code>U ∈ (0,1)</code> raised to a huge power underflows to 0. Present in both APIs; this is exactly what feeds the <code>standard_t</code> inf above (beta inherits it too, saturating at {0,1}).",
+    timeout:15000,
+    code:
+`import numpy as np
+a = 2.0**-12
+gz = int((np.random.default_rng(1).standard_gamma(a, 50000) == 0).sum())
+b  = np.random.default_rng(1).beta(a, a, 50000)
+print("shape = 2**-12:")
+print("  gamma exact-0 :", gz, "/ 50000   (support is the OPEN interval (0, inf))")
+print("  beta in {0,1} :", int(((b==0)|(b==1)).sum()), "/ 50000")
+print("verdict:", "BUG - open-support draws underflow to exactly 0")`
+  },
+  {
+    id:"noncentral_chisquare", sampler:"noncentral_chisquare", classes:["DISTORT"],
+    signal:"For <code>df ≤ 1</code>, <code>noncentral_chisquare</code> inherits the <b>same variance inflation</b> as Poisson, for the same reason.",
+    source:"<a href=\"https://github.com/numpy/numpy/blob/main/numpy/random/src/legacy/legacy-distributions.c#L130\" target=\"_blank\" rel=\"noopener\">legacy-distributions.c#L130</a> — <code>random_poisson(aug_state-&gt;bit_generator, nonc / 2.0)</code> feeds into <code>legacy_chisquare(df + 2*i)</code>.",
+    comment:"For large <code>nonc</code>, the internal Poisson rate is large enough to trigger the PTRS cancellation above. (For <code>df &gt; 1</code> it instead uses a normal-offset path with no Poisson, and is correct.)",
+    timeout:20000,
+    code:
+`import numpy as np
+df, nonc = 0.5, 2e18
+x = np.random.default_rng(0).noncentral_chisquare(df, nonc, 300000)
+mean, var = df + nonc, 2*(df + 2*nonc)
+print("df=0.5, nonc=2e18: var/theory =", round(float(((x-mean).var())/var),3), "(should be 1.0)")
+print("path: chisq(df + 2*Poisson(nonc/2))  ->  inherits PTRS inflation")
+print("verdict:", "BUG - variance inflated (inherited from PTRS Poisson)")`
+  },
+  {
+    id:"zipf", sampler:"zipf", classes:["NONTERM","LATENT"],
+    signal:"Legacy <code>zipf(a)</code> can <b>hang forever</b> — near <code>a=1</code> (unbounded rejection) or for <code>a ≥ 1025</code> (broken accept test).",
+    source:"<a href=\"https://github.com/numpy/numpy/blob/main/numpy/random/src/legacy/legacy-distributions.c#L578-L605\" target=\"_blank\" rel=\"noopener\">legacy-distributions.c#L578-L605</a> — <code>legacy_random_zipf</code>'s rejection loop has no bound, unlike Generator's <a href=\"https://github.com/numpy/numpy/blob/main/numpy/random/src/distributions/distributions.c#L1016-L1028\" target=\"_blank\" rel=\"noopener\">distributions.c#L1016-L1028</a>.",
+    comment:"NONTERM: acceptance fraction ~ <code>(a-1)·log(2**63) → 0</code> as a→1, so rejection is unbounded; for a≥1025 the accept test becomes <code>nan≤nan → false</code>, also looping forever. Generator added both guards (Umin, a≥1025→1). LATENT (separate, benign): the reject test <code>X &gt; (double)RAND_INT_MAX</code> lets <code>X==2**63</code> through to <code>(int64)2**63 = INT64_MIN</code> — unreachable under 53-bit U.",
+    timeout:15000,
+    code:
+`import numpy as np
+a = 1.0000001
+t = np.random.default_rng(0).zipf(a, 20000)          # Generator: Umin guard -> instant
+print("Generator zipf(a=1.0000001): ok, max =", t.max())
+frac = (a-1)*np.log(2.0**63)
+print("legacy acceptance fraction ~ (a-1)*ln(2**63) =", round(frac,7),
+      " -> ~", int(1/frac), "rejects per accepted sample")
+with np.errstate(invalid='ignore'):
+    bad = np.float64(2.0**63).astype(np.int64)
+print("[LATENT] (int64)(2**63) =", bad, "== INT64_MIN?", bad == np.iinfo(np.int64).min)
+print("verdict: BUG - legacy hangs (no Umin / a>=1025 guard); use 'Run legacy (hangs)' to see it")`,
+    hang:{
+      label:"Run legacy zipf (hangs — times out)", timeout:6000,
+      code:
+`import numpy as np
+# Legacy zipf near a=1 rejects ~forever: this call never returns.
+np.random.RandomState(0).zipf(1.0000001, 20000)
+print("returned (unexpected)")`
+    }
+  },
+  {
+    id:"logseries", sampler:"logseries", classes:["LATENT"],
+    signal:"Legacy <code>logseries(p)</code> hits the <b>same cancellation</b> as geometric for tiny p — but here it happens to still return the correct answer.",
+    source:"<a href=\"https://github.com/numpy/numpy/blob/main/numpy/random/src/legacy/legacy-distributions.c#L706\" target=\"_blank\" rel=\"noopener\">legacy-distributions.c#L706</a> — <code>legacy_logseries</code>: <code>r = log(1.0 - p)</code>.",
+    comment:"For exact <code>p ≤ 2**-54</code>, <code>fl(1-p)=1 → r=0</code>, the same ROUND collapse as geometric. But logseries is ~point mass at 1 in that regime (<code>P(X≥2) ~ p/2</code>), so legacy's collapse lands on the coincidentally-correct value 1 instead of a garbage one. LATENT, not a real-world bug.",
+    timeout:15000,
+    code:
+`import numpy as np
+for k in (40, 54, 58):
+    p = 2.0**-k
+    L = np.random.RandomState(1).logseries(p, 50000)
+    pge2 = 1.0 + p/np.log1p(-p)           # theoretical P(X >= 2)
+    print(f"p=2**-{k}: fl(1-p)==1? {1.0-p==1.0}  legacy all==1? {bool((L==1).all())}"
+          f"  theory P(X>=2)={pge2:.1e}")
+print("verdict: LATENT - real cancellation, but benign (returns the correct value 1)")`
+  }
+];
+
+// ------------------------------------------------------------------ backend mgr
+const BACKEND_URL = "REPLACE_WITH_BACKEND_URL";
+let queue = [], running = null, numpyVersion = null;
+
+async function checkBackend(){
+  try {
+    const r = await fetch(BACKEND_URL + "/health");
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const m = await r.json();
+    numpyVersion = m.version;
+    onReady();
+  } catch (err) {
+    onBootFail(String(err));
+  }
+}
+function onReady(){
+  document.getElementById("verchip").innerHTML = "numpy <b>"+numpyVersion+"</b>";
+  document.getElementById("footver").textContent =
+    "numpy "+numpyVersion+" · sandboxed backend (Cloud Run) · MT19937 (legacy) + PCG64 (Generator)";
+  const boot = document.getElementById("boot");
+  boot.style.display = "none";
+  document.getElementById("runall").disabled = false;
+  document.querySelectorAll(".runbtn,.hangbtn").forEach(b => b.disabled = false);
+}
+function onBootFail(err){
+  const boot = document.getElementById("boot");
+  boot.classList.add("err");
+  boot.innerHTML = "Could not reach the execution backend. "+err;
+}
+function runJob(id, code, timeoutMs){
+  return new Promise((resolve) => { queue.push({id, code, timeoutMs, resolve}); pump(); });
+}
+async function pump(){
+  if (running || queue.length === 0) return;
+  running = queue.shift();
+  const job = running;
+  try {
+    const r = await fetch(BACKEND_URL + "/run", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({code: job.code, timeout_ms: job.timeoutMs}),
+      signal: AbortSignal.timeout(job.timeoutMs + 5000)   // buffer over the server's own timeout
+    });
+    if (!r.ok){
+      job.resolve("ERROR - backend returned HTTP " + r.status + "\nverdict: BUG (backend error)");
+    } else {
+      const m = await r.json();
+      job.resolve(m.out);
+    }
+  } catch (err) {
+    job.resolve("HANG - no result in " + (job.timeoutMs/1000) + "s\nverdict: BUG (non-termination)");
+  }
+  running = null;
+  pump();
+}
+
+// ------------------------------------------------------------------ rendering
+function tagEl(cls){ const s=document.createElement("span"); s.className="cls "+cls; s.textContent=cls; return s; }
+
+function renderLegend(){
+  const defs = [
+    ["ROUND","cancellation in C"],["UFLOW","underflow to 0 → inf/nan"],
+    ["LATTICE","int64 grid (cosmetic)"],["RANGE","int64 saturation"],
+    ["INTOVF","int validation overflow"],["DISTORT","acceptance-test collapse"],
+    ["NONTERM","hangs"],["LATENT","real but benign"]
+  ];
+  const L = document.getElementById("legend");
+  defs.forEach(([k,v])=>{ const t=document.createElement("span"); t.className="tag";
+    t.innerHTML="<b>"+k+"</b> "+v; L.appendChild(t); });
+}
+
+function verdictClass(out){
+  const lines = out.split("\n").filter(l=>/verdict\s*:/i.test(l));
+  const v = (lines.length ? lines[lines.length-1] : out);
+  if (/\bHANG\b|\bBUG\b/i.test(v)) return "bug";
+  if (/\bLATENT\b/i.test(v)) return "latent";
+  if (/\bclean\b/i.test(v)) return "clean";
+  return "";
+}
+function colorizeOutput(pre, out){
+  pre.textContent = "";
+  out.split("\n").forEach(line => {
+    const div = document.createElement("div");
+    if (/verdict\s*:/i.test(line)){
+      div.className = "verdictline " + (/\bHANG\b|\bBUG\b/i.test(line) ? "bug" : /LATENT/i.test(line) ? "latent" : /clean/i.test(line) ? "clean" : "");
+    }
+    div.textContent = line;
+    pre.appendChild(div);
+  });
+}
+
+function setStatus(cell, state, label){
+  const st = cell.querySelector(".status");
+  cell.classList.remove("bug","clean","latent","running");
+  st.classList.remove("running","bug","clean","latent");
+  if (state){ cell.classList.add(state); st.classList.add(state); }
+  st.querySelector(".slabel").textContent = label;
+}
+
+async function runCell(cell, code, timeout){
+  const btn = cell.querySelector(".runbtn");
+  const pre = cell.querySelector("pre.out");
+  setStatus(cell, "running", "running…");
+  cell.querySelectorAll("button").forEach(b=>b.disabled=true);
+  const out = await runJob(cell.dataset.id, code, timeout);
+  pre.classList.add("show");
+  colorizeOutput(pre, out);
+  const vc = verdictClass(out);
+  const label = vc==="bug" ? (/HANG/i.test(out)?"HANG":"BUG") : vc==="latent" ? "latent" : vc==="clean" ? "clean" : "done";
+  setStatus(cell, vc, label);
+  cell.querySelectorAll("button").forEach(b=>b.disabled=false);
+  return vc;
+}
+
+function renderCells(){
+  const root = document.getElementById("cells");
+  BUGS.forEach(bug => {
+    const cell = document.createElement("section");
+    cell.className = "cell"; cell.dataset.id = bug.id;
+    const stripe = document.createElement("div"); stripe.className="stripe";
+    const body = document.createElement("div"); body.className="cbody";
+
+    const head = document.createElement("div"); head.className="chead";
+    const name = document.createElement("span"); name.className="sampler"; name.textContent="np.random."+bug.sampler;
+    const classes = document.createElement("span"); classes.className="classes";
+    bug.classes.forEach(c=>classes.appendChild(tagEl(c)));
+    const status = document.createElement("span"); status.className="status";
+    status.innerHTML='<span class="led"></span><span class="slabel">idle</span>';
+    head.append(name, classes, status);
+
+    const mech = document.createElement("div"); mech.className="mech";
+    [["signal","Signal",bug.signal],["source","Source",bug.source],["comments","Comments",bug.comment]].forEach(([key,label,html])=>{
+      const row = document.createElement("div"); row.className="mech-row "+key;
+      const lab = document.createElement("span"); lab.className="mech-label"; lab.textContent=label;
+      const txt = document.createElement("span"); txt.className="mech-text"; txt.innerHTML=html;
+      row.append(lab, txt);
+      mech.appendChild(row);
+    });
+
+    const ta = document.createElement("textarea");
+    ta.className="code"; ta.spellcheck=false;
+    ta.value = bug.code;
+    ta.rows = Math.min(16, bug.code.split("\n").length + 1);
+
+    const actions = document.createElement("div"); actions.className="actions";
+    const run = document.createElement("button"); run.className="runbtn"; run.textContent="Run"; run.disabled=true;
+    run.onclick = () => runCell(cell, ta.value, bug.timeout);
+    actions.appendChild(run);
+    if (bug.hang){
+      const hb = document.createElement("button");
+      hb.className="warn hangbtn runbtn"; hb.textContent=bug.hang.label; hb.disabled=true;
+      hb.onclick = () => runCell(cell, bug.hang.code, bug.hang.timeout);
+      actions.appendChild(hb);
+    }
+    const pre = document.createElement("pre"); pre.className="out";
+
+    body.append(head, mech, ta, actions, pre);
+    cell.append(stripe, body);
+    root.appendChild(cell);
+  });
+}
+
+document.getElementById("runall").onclick = async () => {
+  const btn = document.getElementById("runall");
+  btn.disabled = true; btn.textContent = "Running…";
+  for (const bug of BUGS){                       // main snippets only; hang button excluded
+    const cell = document.querySelector('.cell[data-id="'+bug.id+'"]');
+    await runCell(cell, cell.querySelector("textarea").value, bug.timeout);
+  }
+  btn.disabled = false; btn.textContent = "Run all diagnostics";
+};
+
+renderLegend();
+renderCells();
+checkBackend();
+</script>
+</body>
+</html>

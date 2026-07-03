@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: sampler-fault-lab-backend
+    runtime: docker
+    plan: free
+    region: oregon
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health

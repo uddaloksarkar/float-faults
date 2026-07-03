@@ -94,11 +94,7 @@ def binomial():
     # form, never forming log(n!), so it does NOT get the PTRS cancellation:
     # var/npq stays ~1.0 (only ~1.08 at the 2**62 int64 ceiling).
     vr, _ = _var_ratio(gn().binomial(2**58, 0.5, 1_000_000), 2**58 * 0.5, 2**58 * 0.25)
-    print(f"  [clean] BTPE n=2**58 p=0.5: var/npq={vr:.3f} (mode-relative log-pmf, correct)")
-
-    # [retracted] p->1 is NOT a bug: p=1-2**-58 == 1.0 exactly (binomial(n,1)=n is
-    # correct); with the largest exact double below 1, p=1-2**-53, it also works.
-    print(f"  [note ] p=1-2**-58 == 1.0? {1.0-2.0**-58 == 1.0}  -> the 'p->1 collapse' was retracted")
+    print(f"  [clean] BTPE n=2**58 p=0.5: var/npq={vr:.3f} (mode-relative log-pmf, no PTRS bug)")
 
 
 # --------------------------------------------------------------------------- #
@@ -246,12 +242,6 @@ def gamma_beta():
         bz = int(((b == 0) | (b == 1)).sum())
         print(f"            k={k:2d} a=2**-{k}={a:.2e}: gamma exact-0={gz:>6d}/50000  beta in{{0,1}}={bz}/50000")
 
-    # [clean] Marsaglia-Tsang (shape>=1) uses a MODE-RELATIVE log-acceptance
-    # d*(1-v+log v) that stays O(1), so large shape has NO cancellation: var is
-    # correct. This is why beta/chisquare/f/standard_t(large df)/wald are fine too.
-    vr, _ = _var_ratio(gn().standard_gamma(1e17, 1_000_000), 1e17, 1e17)
-    print(f"  [clean] standard_gamma shape=1e17: var/shape={vr:.3f} (Marsaglia-Tsang, correct)")
-
 
 # --------------------------------------------------------------------------- #
 # noncentral_chisquare
@@ -265,11 +255,6 @@ def noncentral_chisquare():
         mean, var = 0.5 + nonc, 2 * (0.5 + 2 * nonc)
         vr, _ = _var_ratio(gn().noncentral_chisquare(0.5, nonc, 1_000_000), mean, var)
         print(f"            nonc={nonc:.0e}: var/theory={vr:.3f}" + ("  <- INFLATED" if vr > 1.05 else ""))
-
-    # [clean] for df>1 it uses chisq(df-1) + (Z+sqrt(nonc))**2 -- NO internal
-    # Poisson, so no PTRS, so it stays correct.
-    vr, _ = _var_ratio(gn().noncentral_chisquare(2.0, 1e17, 1_000_000), 2 + 1e17, 2 * (2 + 2e17))
-    print(f"  [clean] df=2 nonc=1e17: var/theory={vr:.3f} (normal-offset path, no Poisson)")
 
 
 # --------------------------------------------------------------------------- #
