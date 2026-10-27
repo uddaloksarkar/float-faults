@@ -89,6 +89,18 @@
     footer { padding:30px 0 60px; color:var(--muted); font-size:13px; }
     footer .container { display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; }
 
+
+    .fp-analysis { border-top:3px solid var(--green); padding-top:21px; }
+    .fp-analysis p { font-size:15px; color:#405049; margin:0 0 18px; }
+    .fp-equation { background:var(--ink); color:#fff; padding:18px 20px; margin-bottom:23px; overflow:auto; }
+    .fp-equation span { display:block; color:#c5d6cb; font:500 11px var(--mono); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; }
+    .fp-equation code { background:none; color:#fff; padding:0; font:500 16px/1.5 var(--mono); white-space:nowrap; }
+    .fp-scales { border-top:1px solid var(--line); margin-bottom:21px; }
+    .fp-scales div { display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; border-bottom:1px solid var(--line); padding:11px 0; font-size:13px; }
+    .fp-scales span { color:var(--muted); }
+    .fp-scales strong { font:600 13px var(--mono); text-align:right; }
+    .fp-analysis .fp-caveat { border-left:3px solid var(--orange); padding-left:15px; color:var(--muted); font-size:13px; }
+    .fp-source { font:600 13px var(--mono); }
     .zoo-key { display:flex; flex-wrap:wrap; gap:8px; margin:26px 0 22px; }
     .zoo-key span { font:500 11px var(--mono); border:1px solid var(--line); color:var(--muted); padding:5px 8px; background:var(--white); }
     .zoo-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
@@ -171,14 +183,21 @@
       <div class="container split">
         <div>
           <p class="section-kicker">02 / Why it happens</p>
-          <h2>A small decision depends on subtracting huge numbers.</h2>
-          <p class="section-intro">For large λ, NumPy uses a rejection sampler. Each candidate is accepted or rejected using a log-probability calculation. At extreme rates, floating-point rounding can erase the difference that decision needs.</p>
+          <h2>Rounding moves the acceptance boundary.</h2>
+          <p class="section-intro">For λ ≥ 10, NumPy uses transformed rejection: propose an integer <code>k</code>, accept some proposals on a fast path, and test the rest against the Poisson log mass. The distribution depends on that last comparison being resolved accurately.</p>
+          <p class="section-intro" style="font-size:15px">The issue is specific to the evaluated program. Rounding in <code>log(λ)</code>, the product, NumPy’s log-gamma routine, and the subtractions all enter the decision; rearranging an expression that is equal over the reals can change the sampler’s output distribution.</p>
         </div>
-        <div class="steps">
-          <div class="step"><span class="index">01</span><div><h3>Propose a count</h3><p>The algorithm first proposes a possible Poisson result near λ.</p></div></div>
-          <div class="step"><span class="index">02</span><div><h3>Compute an acceptance score</h3><p>Part of the score is <code>−λ + k log(λ) − log(k!)</code>. Its terms are enormous even when their final difference is small.</p></div></div>
-          <div class="step"><span class="index">03</span><div><h3>Round, then decide</h3><p>At very large λ, cancellation in that score changes which tail candidates are accepted. The resulting distribution is wider than intended.</p></div></div>
-          <p style="font-size:14px;color:var(--muted);margin:20px 0 0">See the <a href="https://github.com/numpy/numpy/blob/main/numpy/random/src/distributions/distributions.c" target="_blank" rel="noopener noreferrer">NumPy rejection sampler source</a>. The accompanying manuscript analyzes how the exact sequence of floating-point operations affects the resulting distribution.</p>
+        <div class="fp-analysis">
+          <div class="fp-equation"><span>Poisson side of the accept/reject test</span><code>−λ + k log(λ) − log Γ(k + 1)</code></div>
+          <p>For the live example, <code>λ = 9 × 10¹⁸</code> and <code>k ≈ λ</code>:</p>
+          <div class="fp-scales" aria-label="Floating-point scales near the example rate">
+            <div><span>Large intermediate</span><strong>k log(λ) ≈ 3.93 × 10²⁰</strong></div>
+            <div><span>Binary64 spacing there</span><strong>1 ulp = 65,536</strong></div>
+            <div><span>Ideal log mass near the mode</span><strong>≈ −22.74</strong></div>
+          </div>
+          <p>At <code>k = λ + t√λ</code>, the exact log mass changes by roughly <code>−t²/2</code>: an order-one signal across the natural width of the distribution. A one-ulp perturbation of the large product is therefore vastly bigger than the variation the test must distinguish. After cancellation, the rounded score can place tail proposals on the wrong side of the acceptance boundary.</p>
+          <p class="fp-caveat">This scale comparison explains the numerical vulnerability; the measured variance inflation is empirical. The full sampler also rounds its proposal and has a fast accept branch. The manuscript analyzes error through the exact operation sequence rather than treating the formula alone as a proof of the observed ratio.</p>
+          <a class="fp-source" href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L3180-L3233" target="_blank" rel="noopener noreferrer">Read NumPy’s transformed-rejection code →</a>
         </div>
       </div>
     </section>
