@@ -186,7 +186,7 @@
       <div class="container split">
         <div>
           <p class="section-kicker">02 / Why it happens</p>
-          <h2>The sampler loses the signal that should reject tail draws.</h2>
+          <h2>Rounding error compromises the sampler’s internal decision.</h2>
           <p class="section-intro">At large λ, NumPy proposes a count <code>k</code> from a broader distribution, then uses an acceptance test to trim the tails back to a Poisson distribution. Some proposals take a fast accept path. For the others, the test needs the Poisson log probability of <code>k</code>.</p>
           <p class="section-intro">That log probability changes by only about 0.5 between a central count and one standard deviation into the tail. But NumPy computes it by subtracting terms near <code>10²⁰</code>. Rounding can erase the small difference, so the test no longer rejects tail proposals at the intended rate. The measured output is therefore too wide.</p>
         </div>
