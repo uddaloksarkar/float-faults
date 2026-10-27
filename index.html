@@ -94,11 +94,14 @@
     .fp-analysis p { font-size:15px; color:#405049; margin:0 0 18px; }
     .fp-equation { background:var(--ink); color:#fff; padding:18px 20px; margin-bottom:23px; overflow:auto; }
     .fp-equation span { display:block; color:#c5d6cb; font:500 11px var(--mono); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; }
-    .fp-equation code { background:none; color:#fff; padding:0; font:500 16px/1.5 var(--mono); white-space:nowrap; }
-    .fp-scales { border-top:1px solid var(--line); margin-bottom:21px; }
-    .fp-scales div { display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; border-bottom:1px solid var(--line); padding:11px 0; font-size:13px; }
-    .fp-scales span { color:var(--muted); }
-    .fp-scales strong { font:600 13px var(--mono); text-align:right; }
+    .fp-equation code { background:none; color:#fff; padding:0; font:500 14px/1.5 var(--mono); white-space:nowrap; }
+    .fp-table-wrap { overflow-x:auto; margin-bottom:17px; }
+    .fp-table { width:100%; min-width:480px; border-collapse:collapse; font:13px/1.45 var(--mono); }
+    .fp-table th,.fp-table td { padding:10px 9px; text-align:left; border-bottom:1px solid var(--line); }
+    .fp-table thead th { color:var(--muted); font-size:11px; font-weight:500; }
+    .fp-table tbody th { font-weight:600; }
+    .fp-table tbody td:last-child { color:var(--orange); font-weight:600; }
+    .fp-analysis .fp-scale-note { font-size:14px; }
     .fp-analysis .fp-caveat { border-left:3px solid var(--orange); padding-left:15px; color:var(--muted); font-size:13px; }
     .fp-source { font:600 13px var(--mono); }
     .zoo-key { display:flex; flex-wrap:wrap; gap:8px; margin:26px 0 22px; }
@@ -183,21 +186,24 @@
       <div class="container split">
         <div>
           <p class="section-kicker">02 / Why it happens</p>
-          <h2>Rounding moves the acceptance boundary.</h2>
-          <p class="section-intro">For λ ≥ 10, NumPy uses transformed rejection: propose an integer <code>k</code>, accept some proposals on a fast path, and test the rest against the Poisson log mass. The distribution depends on that last comparison being resolved accurately.</p>
-          <p class="section-intro" style="font-size:15px">The issue is specific to the evaluated program. Rounding in <code>log(λ)</code>, the product, NumPy’s log-gamma routine, and the subtractions all enter the decision; rearranging an expression that is equal over the reals can change the sampler’s output distribution.</p>
+          <h2>The sampler loses the signal that should reject tail draws.</h2>
+          <p class="section-intro">At large λ, NumPy proposes a count <code>k</code> from a broader distribution, then uses an acceptance test to trim the tails back to a Poisson distribution. Some proposals take a fast accept path. For the others, the test needs the Poisson log probability of <code>k</code>.</p>
+          <p class="section-intro">That log probability changes by only about 0.5 between a central count and one standard deviation into the tail. But NumPy computes it by subtracting terms near <code>10²⁰</code>. Rounding can erase the small difference, so the test no longer rejects tail proposals at the intended rate. The measured output is therefore too wide.</p>
         </div>
         <div class="fp-analysis">
-          <div class="fp-equation"><span>Poisson side of the accept/reject test</span><code>−λ + k log(λ) − log Γ(k + 1)</code></div>
-          <p>For the live example, <code>λ = 9 × 10¹⁸</code> and <code>k ≈ λ</code>:</p>
-          <div class="fp-scales" aria-label="Floating-point scales near the example rate">
-            <div><span>Large intermediate</span><strong>k log(λ) ≈ 3.93 × 10²⁰</strong></div>
-            <div><span>Binary64 spacing there</span><strong>1 ulp = 65,536</strong></div>
-            <div><span>Ideal log mass near the mode</span><strong>≈ −22.74</strong></div>
-          </div>
-          <p>At <code>k = λ + t√λ</code>, the exact log mass changes by roughly <code>−t²/2</code>: an order-one signal across the natural width of the distribution. A one-ulp perturbation of the large product is therefore vastly bigger than the variation the test must distinguish. After cancellation, the rounded score can place tail proposals on the wrong side of the acceptance boundary.</p>
-          <p class="fp-caveat">This scale comparison explains the numerical vulnerability; the measured variance inflation is empirical. The full sampler also rounds its proposal and has a fast accept branch. The manuscript analyzes error through the exact operation sequence rather than treating the formula alone as a proof of the observed ratio.</p>
-          <a class="fp-source" href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L3180-L3233" target="_blank" rel="noopener noreferrer">Read NumPy’s transformed-rejection code →</a>
+          <div class="fp-equation"><span>The cancellation in the acceptance test</span><code>log P(K = k) = −λ + k log(λ) − log Γ(k + 1)</code></div>
+          <p>At <code>λ = 9 × 10¹⁸</code>, compare a count at the center with two counts in the upper tail:</p>
+          <div class="fp-table-wrap"><table class="fp-table">
+            <thead><tr><th>Candidate</th><th>Ideal log probability</th><th>Direct binary64 evaluation</th></tr></thead>
+            <tbody>
+              <tr><th>k = λ</th><td>−22.74</td><td>0</td></tr>
+              <tr><th>k = λ + √λ</th><td>−23.24</td><td>0</td></tr>
+              <tr><th>k = λ + 2√λ</th><td>−24.74</td><td>0</td></tr>
+            </tbody>
+          </table></div>
+          <p class="fp-scale-note">The ideal score falls as <code>k</code> enters the tail; the rounded illustration gives all three candidates the same score. A rejection test using such scores cannot apply the needed tail correction. Here <code>k log(λ) ≈ 3.93 × 10²⁰</code>, where adjacent binary64 numbers are <code>65,536</code> apart.</p>
+          <p class="fp-caveat">The last column evaluates the displayed formula with binary64 <code>log</code> and <code>lgamma</code> to show the loss of information; NumPy uses its own <code>random_loggam</code>, so these are not its internal scores. The variance inflation is measured separately in the plot above.</p>
+          <a class="fp-source" href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L3180-L3233" target="_blank" rel="noopener noreferrer">Read NumPy’s accept/reject test →</a>
         </div>
       </div>
     </section>
