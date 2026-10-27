@@ -1,157 +1,240 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NumPy Sampler Fault Lab</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg:#EDEFF3; --panel:#FFFFFF; --ink:#14171C; --muted:#5A6472;
-    --line:#D3D8E0; --line2:#E4E8EE; --accent:#3A3AD6; --accent-ink:#2626a8;
-    --bug:#C4362E; --clean:#137A5A; --latent:#A9740E; --run:#3A3AD6;
-    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
-    --disp:"Space Grotesk",system-ui,sans-serif;
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0}
-  body{background:var(--bg);color:var(--ink);font-family:var(--disp);
-    line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:5rem}
-  a{color:var(--accent-ink)}
-  .wrap{max-width:1060px;margin:0 auto;padding:0 20px}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A catalog of reproducible numerical faults in NumPy random samplers, with explanations and runnable examples.">
+  <title>Sampler Error Zoo — Floating-point faults in NumPy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root { --paper:#f7f6f1; --white:#fffefa; --ink:#192723; --muted:#53615b; --line:#cdd5cd; --green:#165c48; --green-light:#e7efe9; --orange:#a54426; --orange-light:#f7e9df; --mono:"IBM Plex Mono",monospace; --sans:"DM Sans",sans-serif; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:17px/1.6 var(--sans); }
+    a { color:var(--green); text-underline-offset:3px; }
+    button,textarea { font:inherit; }
+    button { cursor:pointer; }
+    button:focus-visible, a:focus-visible, textarea:focus-visible { outline:3px solid #d67845; outline-offset:3px; }
+    .container { width:min(1120px, calc(100% - 44px)); margin:auto; }
+    .site-header { background:var(--white); border-bottom:1px solid var(--line); }
+    .header-inner { min-height:74px; display:flex; align-items:center; gap:32px; }
+    .wordmark { font:600 15px var(--mono); color:var(--ink); text-decoration:none; white-space:nowrap; }
+    .wordmark span { color:var(--orange); }
+    nav { margin-left:auto; display:flex; gap:26px; font-size:14px; font-weight:600; }
+    nav a { color:var(--muted); text-decoration:none; }
+    nav a:hover { color:var(--green); text-decoration:underline; }
+    .hero { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(270px,.7fr); gap:70px; padding:92px 0 96px; align-items:end; }
+    .kicker,.section-kicker { margin:0 0 18px; color:var(--green); font:600 12px/1.4 var(--mono); letter-spacing:.1em; text-transform:uppercase; }
+    h1,h2,h3,p { margin-top:0; }
+    h1 { max-width:850px; margin-bottom:28px; font-size:clamp(44px,6.3vw,78px); line-height:1.04; letter-spacing:-.055em; font-weight:600; }
+    h2 { font-size:clamp(30px,4vw,46px); line-height:1.14; letter-spacing:-.04em; font-weight:600; margin-bottom:20px; }
+    h3 { font-size:22px; line-height:1.25; letter-spacing:-.025em; margin-bottom:10px; }
+    .hero .lead { max-width:680px; font-size:21px; line-height:1.5; color:#34423c; margin-bottom:32px; }
+    .hero-actions { display:flex; gap:13px; flex-wrap:wrap; align-items:center; }
+    .button { display:inline-flex; align-items:center; justify-content:center; min-height:46px; padding:10px 19px; border:1px solid var(--green); border-radius:4px; background:var(--green); color:white; text-decoration:none; font-size:14px; font-weight:700; line-height:1.2; }
+    .button:hover { background:#0d4434; color:#fff; }
+    .button.secondary { background:transparent; color:var(--green); }
+    .button.secondary:hover { background:var(--green-light); }
+    .hero-note { border-top:3px solid var(--green); padding-top:20px; }
+    .hero-note .number { font:500 clamp(52px,7vw,82px)/1 var(--mono); letter-spacing:-.08em; color:var(--orange); margin-bottom:13px; }
+    .hero-note p { margin:0; font-size:15px; line-height:1.5; color:var(--muted); }
+    .hero-note strong { color:var(--ink); }
+    section.band { border-top:1px solid var(--line); padding:78px 0 86px; }
+    .section-intro { max-width:760px; color:var(--muted); font-size:18px; }
+    .figure-box { margin:34px 0 0; border:1px solid var(--line); background:var(--white); padding:20px; }
+    .figure-box img { display:block; width:100%; height:auto; }
+    figcaption { border-top:1px solid var(--line); margin-top:20px; padding-top:15px; color:var(--muted); font-size:14px; }
+    .figure-box strong { color:var(--ink); }
+    .readout { display:grid; grid-template-columns:repeat(3,1fr); margin-top:28px; border:1px solid var(--line); background:var(--white); }
+    .readout > div { padding:19px 22px; }
+    .readout > div + div { border-left:1px solid var(--line); }
+    .readout span { display:block; color:var(--muted); font:500 12px var(--mono); margin-bottom:6px; }
+    .readout strong { font-size:24px; letter-spacing:-.03em; }
+    .readout em { font-style:normal; color:var(--orange); }
+    .split { display:grid; grid-template-columns:minmax(270px,.8fr) minmax(0,1.2fr); gap:84px; }
+    .steps { border-top:1px solid var(--line); }
+    .step { display:grid; grid-template-columns:34px 1fr; gap:17px; padding:22px 0; border-bottom:1px solid var(--line); }
+    .step .index { font:600 13px var(--mono); color:var(--green); padding-top:4px; }
+    .step h3 { font-size:19px; }
+    .step p { color:var(--muted); font-size:16px; margin:0; }
+    code { font: .86em var(--mono); background:#e8ece7; padding:1px 4px; border-radius:2px; }
+    .demo { background:var(--ink); color:#f3f5ed; padding:34px; border-radius:4px; }
+    .demo-top { display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; align-items:center; margin-bottom:15px; }
+    .demo .section-kicker { color:#b9d7bd; margin:0; }
+    .version { font:12px var(--mono); color:#d2ddd3; }
+    .demo h3 { font-size:25px; color:#fff; }
+    .demo p { color:#d2ddd3; font-size:15px; }
+    .demo textarea { display:block; width:100%; min-height:264px; resize:vertical; border:1px solid #596961; border-radius:3px; padding:16px; background:#101b17; color:#f2f7ef; font:13px/1.55 var(--mono); tab-size:4; white-space:pre; overflow:auto; }
+    .demo-controls { display:flex; align-items:center; gap:15px; margin:18px 0 0; flex-wrap:wrap; }
+    .demo button { border:0; border-radius:3px; padding:10px 17px; font:700 14px var(--sans); background:#dcead9; color:#143e2c; }
+    .demo button:hover { background:#fff; }
+    .demo button:disabled { opacity:.55; cursor:wait; }
+    .demo-status { font:12px var(--mono); color:#d2ddd3; }
+    .output { margin:17px 0 0; background:#0c1511; color:#eff7e9; padding:16px; white-space:pre-wrap; overflow:auto; font:13px/1.6 var(--mono); display:none; }
+    .output.show { display:block; }
+    .demo-foot { margin:18px 0 0!important; font-size:13px!important; }
+    .companions { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; margin-top:30px; }
+    .companion { border:1px solid var(--line); background:var(--white); padding:28px; }
+    .companion .tag { display:inline-block; margin-bottom:16px; color:var(--green); font:600 11px var(--mono); text-transform:uppercase; letter-spacing:.06em; }
+    .companion p { color:var(--muted); margin-bottom:0; }
+    .secondary-list { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:28px; }
+    .secondary-list article { border-top:2px solid var(--line); padding-top:18px; }
+    .secondary-list h3 { font:600 16px var(--mono); }
+    .secondary-list p { font-size:15px; color:var(--muted); margin-bottom:0; }
+    .scope { background:var(--green-light); border-top:1px solid #cedece; border-bottom:1px solid #cedece; padding:56px 0; }
+    .scope-inner { display:grid; grid-template-columns:1fr 1.4fr; gap:80px; }
+    .scope p { margin-bottom:0; color:#42574b; }
+    footer { padding:30px 0 60px; color:var(--muted); font-size:13px; }
+    footer .container { display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; }
 
-  /* header */
-  header{border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:20}
-  .hbar{display:flex;align-items:center;gap:16px;padding:14px 0;flex-wrap:wrap}
-  .brand{font-weight:700;font-size:1.15rem;letter-spacing:-.01em;white-space:nowrap}
-  .brand .dot{color:var(--accent)}
-  .chip{font-family:var(--mono);font-size:.72rem;color:var(--muted);
-    border:1px solid var(--line);border-radius:2px;padding:4px 8px;white-space:nowrap}
-  .chip b{color:var(--ink);font-weight:700}
-  .spacer{flex:1}
-  button{font-family:var(--disp);font-size:.85rem;font-weight:600;cursor:pointer;
-    border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:3px;
-    padding:8px 14px;transition:filter .12s,opacity .12s}
-  button:hover{filter:brightness(1.08)}
-  button:disabled{opacity:.45;cursor:not-allowed}
-  button.ghost{background:transparent;color:var(--accent-ink)}
-  button.warn{background:transparent;border-color:var(--latent);color:var(--latent)}
-
-  /* hero */
-  .hero{padding:40px 0 22px}
-  .eyebrow{font-family:var(--mono);font-size:.75rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 10px}
-  h1{font-size:clamp(1.9rem,4.4vw,3rem);line-height:1.05;letter-spacing:-.02em;margin:0 0 14px;font-weight:700}
-  .lede{font-size:1.05rem;color:var(--muted);max-width:64ch;margin:0}
-  .verify{margin-top:18px;font-family:var(--mono);font-size:.8rem;color:var(--ink);
-    border-left:3px solid var(--accent);padding:8px 0 8px 12px;background:linear-gradient(90deg,rgba(58,58,214,.05),transparent)}
-
-  /* legend */
-  .legend{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0 6px}
-  .tag{font-family:var(--mono);font-size:.68rem;font-weight:700;letter-spacing:.04em;
-    border:1px solid var(--line);border-radius:2px;padding:3px 7px;color:var(--muted);background:var(--panel)}
-  .tag b{color:var(--ink)}
-
-  /* boot banner */
-  #boot{font-family:var(--mono);font-size:.82rem;margin:20px 0;padding:12px 14px;border:1px solid var(--line);
-    background:var(--panel);border-radius:3px;color:var(--muted);display:flex;align-items:center;gap:10px}
-  #boot.err{border-color:var(--bug);color:var(--bug)}
-  .spin{width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;
-    animation:sp .8s linear infinite;flex:none}
-  @keyframes sp{to{transform:rotate(360deg)}}
-
-  /* cells */
-  .cells{display:flex;flex-direction:column;gap:16px;margin-top:8px}
-  .cell{background:var(--panel);border:1px solid var(--line);border-radius:4px;overflow:hidden;
-    display:grid;grid-template-columns:6px 1fr}
-  .stripe{background:var(--line)}
-  .cell.bug .stripe{background:var(--bug)}
-  .cell.clean .stripe{background:var(--clean)}
-  .cell.latent .stripe{background:var(--latent)}
-  .cell.running .stripe{background:var(--accent);animation:pulse 1s ease-in-out infinite}
-  @keyframes pulse{50%{opacity:.35}}
-  .cbody{padding:16px 18px;min-width:0}
-  .chead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-  .sampler{font-family:var(--mono);font-weight:700;font-size:1rem}
-  .classes{display:flex;gap:6px;flex-wrap:wrap}
-  .cls{font-family:var(--mono);font-size:.64rem;font-weight:700;letter-spacing:.05em;
-    padding:2px 6px;border-radius:2px;border:1px solid var(--line);color:var(--muted)}
-  .cls.ROUND{color:#8a2d8a;border-color:#e2c4e2}
-  .cls.UFLOW{color:#0a6d8a;border-color:#bfe0ea}
-  .cls.LATTICE{color:#5a6472}
-  .cls.RANGE{color:#9a5a12;border-color:#ecd9bd}
-  .cls.INTOVF{color:#7a4d16}
-  .cls.DISTORT{color:#b2352b;border-color:#eecac6}
-  .cls.NONTERM{color:#a01e5a;border-color:#eec4d8}
-  .cls.LATENT{color:#7a6b12}
-  .status{margin-left:auto;font-family:var(--mono);font-size:.72rem;font-weight:700;
-    display:flex;align-items:center;gap:7px;color:var(--muted)}
-  .led{width:9px;height:9px;border-radius:50%;background:var(--line);flex:none;box-shadow:0 0 0 2px var(--panel),0 0 0 3px var(--line2)}
-  .status.running .led{background:var(--accent);animation:pulse 1s infinite}
-  .status.bug .led{background:var(--bug)} .status.bug{color:var(--bug)}
-  .status.clean .led{background:var(--clean)} .status.clean{color:var(--clean)}
-  .status.latent .led{background:var(--latent)} .status.latent{color:var(--latent)}
-  .mech{margin:8px 0 12px;max-width:78ch}
-  .mech b{color:var(--ink);font-weight:700}
-  .mech code{font-family:var(--mono);font-size:.85em;background:var(--line2);border-radius:2px;padding:1px 5px;color:var(--ink)}
-  .mech-row{display:flex;gap:12px;align-items:baseline;padding:5px 0;font-size:.92rem;color:var(--muted);line-height:1.5}
-  .mech-row + .mech-row{border-top:1px dashed var(--line2)}
-  .mech-label{flex:none;width:76px;font-family:var(--mono);font-size:.66rem;font-weight:700;
-    letter-spacing:.07em;text-transform:uppercase;color:var(--accent-ink);align-self:flex-start;padding-top:2px}
-  .mech-text{flex:1;min-width:0}
-  .mech-row.source .mech-text{font-family:var(--mono);font-size:.8rem}
-  .mech-row.source .mech-text a{word-break:break-all}
-  textarea.code{width:100%;font-family:var(--mono);font-size:.8rem;line-height:1.55;color:var(--ink);
-    background:#FafBfc;border:1px solid var(--line);border-radius:3px;padding:11px 12px;resize:vertical;
-    tab-size:4;white-space:pre;overflow:auto}
-  .actions{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
-  .actions .runbtn{padding:6px 13px;font-size:.8rem}
-  pre.out{font-family:var(--mono);font-size:.78rem;line-height:1.5;background:#0f1218;color:#dfe4ec;
-    border-radius:3px;padding:12px 13px;margin:11px 0 0;overflow:auto;white-space:pre-wrap;word-break:break-word;
-    max-height:340px;display:none}
-  pre.out.show{display:block}
-  .verdictline{font-weight:700}
-  .verdictline.bug{color:#ff8a80} .verdictline.clean{color:#6fe0b4} .verdictline.latent{color:#e8c477}
-
-  footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);
-    font-family:var(--mono);font-size:.74rem}
-  @media(max-width:620px){ .cbody{padding:13px 13px} h1{font-size:1.8rem} }
-</style>
+    .zoo-key { display:flex; flex-wrap:wrap; gap:8px; margin:26px 0 22px; }
+    .zoo-key span { font:500 11px var(--mono); border:1px solid var(--line); color:var(--muted); padding:5px 8px; background:var(--white); }
+    .zoo-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+    .exhibit { background:var(--white); border:1px solid var(--line); padding:25px; min-width:0; }
+    .exhibit.featured { border-top:4px solid var(--orange); }
+    .exhibit-head { display:flex; gap:12px; align-items:start; justify-content:space-between; }
+    .exhibit-number { font:600 12px var(--mono); color:var(--green); margin:0 0 11px; }
+    .exhibit h3 { overflow-wrap:anywhere; font:600 18px/1.35 var(--mono); letter-spacing:-.025em; margin:0 0 12px; }
+    .exhibit-label { flex:none; max-width:142px; text-align:right; color:var(--orange); font:600 11px/1.4 var(--mono); }
+    .exhibit-summary { color:#34423c; font-size:16px; margin:0 0 16px; }
+    .exhibit details { border-top:1px solid var(--line); padding-top:14px; }
+    .exhibit summary { cursor:pointer; color:var(--green); font-size:14px; font-weight:700; list-style:none; }
+    .exhibit summary::-webkit-details-marker { display:none; }
+    .exhibit summary::after { content:' +'; }
+    .exhibit details[open] summary::after { content:' −'; }
+    .exhibit-body { margin-top:18px; font-size:14px; }
+    .exhibit-body p { margin:0 0 14px; color:var(--muted); }
+    .exhibit-body p b { color:var(--ink); }
+    .exhibit-body code { overflow-wrap:anywhere; }
+    .exhibit-source { font:12px/1.5 var(--mono); }
+    .exhibit textarea { display:block; width:100%; min-height:190px; resize:vertical; padding:13px; border:1px solid var(--line); background:#f2f4f0; color:var(--ink); font:12px/1.5 var(--mono); white-space:pre; overflow:auto; }
+    .exhibit-actions { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-top:12px; }
+    .exhibit-actions button { background:var(--green); color:#fff; border:1px solid var(--green); border-radius:3px; padding:7px 12px; font:700 13px var(--sans); }
+    .exhibit-actions button:disabled { opacity:.55; cursor:wait; }
+    .exhibit-status { font:12px var(--mono); color:var(--muted); }
+    .exhibit-output { display:none; margin:12px 0 0; max-height:330px; overflow:auto; white-space:pre-wrap; background:#14231d; color:#f3f7f0; padding:13px; font:12px/1.5 var(--mono); }
+    .exhibit-output.show { display:block; }
+    @media(max-width:750px) { .zoo-grid { grid-template-columns:1fr; } }
+    @media(max-width:850px) { .hero,.split,.scope-inner { grid-template-columns:1fr; gap:36px; } .hero { padding:65px 0; } .hero-note { max-width:400px; } .secondary-list { grid-template-columns:1fr; } }
+    @media(max-width:650px) { body { font-size:16px; } .container { width:min(100% - 32px,1120px); } nav { gap:13px; font-size:12px; } nav a:last-child { display:none; } .header-inner { gap:10px; } section.band { padding:60px 0; } .hero .lead { font-size:18px; } .readout,.companions { grid-template-columns:1fr; } .readout > div + div { border-left:0; border-top:1px solid var(--line); } .demo { padding:21px; } .figure-box { padding:10px; overflow-x:auto; } .figure-box img { min-width:800px; } }
+  </style>
 </head>
 <body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="wordmark" href="#top">float<span>/</span>faults</a>
+      <nav aria-label="Main navigation">
+        <a href="#evidence">Evidence</a>
+        <a href="#mechanism">Why it happens</a>
+        <a href="#try">Try it</a>
+        <a href="#more">The zoo</a>
+      </nav>
+    </div>
+  </header>
+  <main id="top">
+    <div class="container hero">
+      <div>
+        <p class="kicker">NumPy random samplers / a field guide</p>
+        <h1>Sampler error zoo.</h1>
+        <p class="lead">A sampler can return the wrong distribution, an impossible value, or no value at all. Here are reproducible NumPy cases where finite precision or integer limits change the result, with the code and source path for each one.</p>
+        <div class="hero-actions">
+          <a class="button" href="#more">Explore all 11 cases</a>
+          <a class="button secondary" href="#evidence">Start with Poisson</a>
+        </div>
+      </div>
+      <aside class="hero-note" aria-label="Guide to this catalog">
+        <div class="number">11</div>
+        <p><strong>Sampler case studies.</strong> Most show an observable failure. One is a benign boundary case, and one is an integer overflow rather than a floating-point error. Each is labeled in the catalog.</p>
+      </aside>
+    </div>
 
-<header>
-  <div class="wrap hbar">
-    <span class="brand">float<span class="dot">·</span>faults</span>
-    <span class="chip" id="verchip">numpy <b>booting…</b></span>
-    <span class="spacer"></span>
-    <button id="runall" disabled>Run all diagnostics</button>
-  </div>
-</header>
+    <section class="band" id="evidence">
+      <div class="container">
+        <p class="section-kicker">01 / What changes</p>
+        <h2>The mean looks fine. The spread does not.</h2>
+        <p class="section-intro">For a Poisson distribution with rate λ, both the mean and variance equal λ. That gives us a direct check: draw many samples and divide their empirical variance by λ. The result should be close to 1.</p>
+        <div class="readout" aria-label="Poisson variance comparison">
+          <div><span>Ideal Poisson variance / λ</span><strong>1.00</strong></div>
+          <div><span>NumPy at λ = 9 × 10¹⁸</span><strong><em>about 1.66</em></strong></div>
+          <div><span>Affected NumPy APIs</span><strong>Generator + RandomState</strong></div>
+        </div>
+        <figure class="figure-box">
+          <img src="inflation_bugs.png" alt="Measured variance divided by theoretical variance across rates. Poisson stays near 1 at moderate rates, then rises above 1.6 near 10 to the eighteenth. Negative binomial and noncentral chi-square also show inflation at large parameters." loading="lazy">
+          <figcaption><strong>Measured variance inflation.</strong> The left plot is the central finding. The other two show NumPy distributions that use a Poisson draw internally. The dashed line marks the target ratio of 1; the plots illustrate these specific parameter choices, not a bound for every input.</figcaption>
+        </figure>
+      </div>
+    </section>
 
-<div class="wrap">
-  <section class="hero">
-    <p class="eyebrow">NumPy random samplers</p>
-    <h1>Where float64 breaks the samplers.</h1>
-    <p class="lede">A live demonstration of NumPy's random samplers and corresponding floating-point faults. This page will showcase cancellation, underflow, saturation, acceptance-test collapse, non-termination, each reproduced against real NumPy.</p>
-    <p class="verify">Every panel runs the exact code shown — edit it, press Run, and the result is computed by real NumPy. All currently used arguments are exactly representable in float64, so the loss happens inside NumPy's C, not at the Python boundary.</p>
+    <section class="band" id="mechanism">
+      <div class="container split">
+        <div>
+          <p class="section-kicker">02 / Why it happens</p>
+          <h2>A small decision depends on subtracting huge numbers.</h2>
+          <p class="section-intro">For large λ, NumPy uses a rejection sampler. Each candidate is accepted or rejected using a log-probability calculation. At extreme rates, floating-point rounding can erase the difference that decision needs.</p>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="index">01</span><div><h3>Propose a count</h3><p>The algorithm first proposes a possible Poisson result near λ.</p></div></div>
+          <div class="step"><span class="index">02</span><div><h3>Compute an acceptance score</h3><p>Part of the score is <code>−λ + k log(λ) − log(k!)</code>. Its terms are enormous even when their final difference is small.</p></div></div>
+          <div class="step"><span class="index">03</span><div><h3>Round, then decide</h3><p>At very large λ, cancellation in that score changes which tail candidates are accepted. The resulting distribution is wider than intended.</p></div></div>
+          <p style="font-size:14px;color:var(--muted);margin:20px 0 0">See the <a href="https://github.com/numpy/numpy/blob/main/numpy/random/src/distributions/distributions.c" target="_blank" rel="noopener noreferrer">NumPy rejection sampler source</a>. The accompanying manuscript analyzes how the exact sequence of floating-point operations affects the resulting distribution.</p>
+        </div>
+      </div>
+    </section>
 
-    <div class="legend" id="legend"></div>
-  </section>
+    <section class="band" id="try">
+      <div class="container split">
+        <div>
+          <p class="section-kicker">03 / Reproduce it</p>
+          <h2>Run the measurement yourself.</h2>
+          <p class="section-intro">This snippet samples NumPy’s <code>Generator.poisson</code>, then compares the measured variance with λ. The subtraction is done in integers before converting to float, avoiding loss of precision in the measurement itself.</p>
+          <p class="section-intro" style="font-size:15px">You can edit the code before running it. Results come from the connected Python backend, whose NumPy version is shown in the panel. Sampling is empirical, so the ratio varies slightly between runs and versions.</p>
+        </div>
+        <div class="demo">
+          <div class="demo-top"><span class="section-kicker">Live NumPy example</span><span class="version" id="version">Checking backend…</span></div>
+          <h3>Variance / λ</h3>
+          <p>Expected: near 1.0. The high-rate example has returned roughly 1.66.</p>
+          <label for="code" class="version">Python code</label>
+          <textarea id="code" spellcheck="false" aria-label="Editable Python example">import numpy as np
 
-  <div id="boot"><span class="spin"></span><span id="bootmsg">Connecting to the execution backend… first request is a few seconds.</span></div>
+lam = 9e18
+samples = np.random.default_rng(0).poisson(lam, 300_000)
+center = np.int64(int(lam))
+offsets = (samples - center).astype(float)
 
-  <div class="cells" id="cells"></div>
+print("NumPy:", np.__version__)
+print("rate:", lam)
+print("samples:", len(samples))
+print("variance / rate:", round(float(offsets.var() / lam), 3))
+print("mean error / standard deviation:",
+      round(float(offsets.mean() / np.sqrt(lam)), 3))</textarea>
+          <div class="demo-controls"><button id="run" type="button">Run in NumPy</button><span class="demo-status" id="status" role="status">Connecting…</span></div>
+          <pre class="output" id="output" aria-live="polite"></pre>
+          <p class="demo-foot">The hosted backend has a time limit. If it is asleep or unavailable, copy the snippet into a local Python environment with NumPy.</p>
+        </div>
+      </div>
+    </section>
 
-  <footer>
-    <div id="footver">numpy — · sandboxed backend · MT19937 (legacy) + PCG64 (Generator)</div>
-    <div style="margin-top:6px">Recurring pattern: the frozen legacy path (RandomState) lacks a guard or stable reformulation that the Generator path added — log1p/expm1, mode-relative log-pmf, Umin, the result&lt;1 guard.</div>
-  </footer>
-</div>
+    <section class="band" id="more">
+      <div class="container">
+        <p class="section-kicker">04 / The catalog</p>
+        <h2>Eleven cases. Several ways for a sampler to fail.</h2>
+        <p class="section-intro">Open any exhibit for the mechanism, NumPy source, and an editable reproduction. “Boundary case” marks a numerical collapse that does not create a meaningful sampling failure in the shown regime.</p>
+        <div class="zoo-key" aria-label="Case labels"><span>Wrong distribution</span><span>Impossible output</span><span>Rejected input</span><span>Non-termination</span><span>Boundary case</span></div>
+        <div class="zoo-grid" id="zoo"></div>
+      </div>
+    </section>
 
-<script>
-// ------------------------------------------------------------------ bug data
+    <section class="scope" id="scope">
+      <div class="container scope-inner">
+        <div><p class="section-kicker">What this project covers</p><h2>Start with NumPy. Then examine the wider ecosystem.</h2></div>
+        <p>This catalog starts with NumPy because its implementations and runnable examples make the faults concrete. Other libraries may use different algorithms and thresholds, so each one needs its own measurement and source-level analysis. The broader research goal is to quantify how far implemented samplers can depart from the distributions that applications assume.</p>
+      </div>
+    </section>
+  </main>
+  <footer><div class="container"><span>float/faults · Floating-point behavior in random samplers</span><span id="foot-version">NumPy backend status pending</span></div></footer>
+  <script>
 const BUGS = [
   {
     id:"binomial", sampler:"binomial", classes:["ROUND"],
@@ -166,8 +249,7 @@ x = np.random.RandomState(1).binomial(n, p, 5000)
 g = np.random.default_rng(1).binomial(n, p, 5000)
 print("RandomState: mean =", x.mean())
 print("Generator  : mean =", round(float(g.mean()), 2))
-print("verdict:", "BUG - RandomState's inversion returns X=0 deterministically once fl(1-p)=1;"
-                   " Generator fixed in numpy 2.4.0 via log1p")`
+print("verdict:", "BUG - legacy collapses to zero; Generator mean shown above" if x.mean()==0 else "unexpected legacy result")`
   },
   {
     id:"geometric", sampler:"geometric", classes:["ROUND"],
@@ -340,188 +422,124 @@ print("returned (unexpected)")`
 for k in (40, 54, 58):
     p = 2.0**-k
     L = np.random.RandomState(1).logseries(p, 50000)
-    pge2 = 1.0 + p/np.log1p(-p)           # theoretical P(X >= 2)
+    pge2 = p/2                            # leading-order P(X >= 2) for tiny p
     print(f"p=2**-{k}: fl(1-p)==1? {1.0-p==1.0}  legacy all==1? {bool((L==1).all())}"
-          f"  theory P(X>=2)={pge2:.1e}")
+          f"  approx P(X>=2)={pge2:.1e}")
 print("verdict: LATENT - real cancellation, but benign (returns the correct value 1)")`
   }
 ];
-
-// ------------------------------------------------------------------ backend mgr
-const BACKEND_URL = "https://sampler-fault-lab-backend.onrender.com";
-let queue = [], running = null, numpyVersion = null;
-
-async function checkBackend(){
-  try {
-    const r = await fetch(BACKEND_URL + "/health");
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    const m = await r.json();
-    numpyVersion = m.version;
-    onReady();
-  } catch (err) {
-    onBootFail(String(err));
-  }
-}
-function onReady(){
-  document.getElementById("verchip").innerHTML = "numpy <b>"+numpyVersion+"</b>";
-  document.getElementById("footver").textContent =
-    "numpy "+numpyVersion+" · sandboxed backend (Cloud Run) · MT19937 (legacy) + PCG64 (Generator)";
-  const boot = document.getElementById("boot");
-  boot.style.display = "none";
-  document.getElementById("runall").disabled = false;
-  document.querySelectorAll(".runbtn,.hangbtn").forEach(b => b.disabled = false);
-}
-function onBootFail(err){
-  const boot = document.getElementById("boot");
-  boot.classList.add("err");
-  boot.innerHTML = "Could not reach the execution backend. "+err;
-}
-function runJob(id, code, timeoutMs){
-  return new Promise((resolve) => { queue.push({id, code, timeoutMs, resolve}); pump(); });
-}
-async function pump(){
-  if (running || queue.length === 0) return;
-  running = queue.shift();
-  const job = running;
-  try {
-    const r = await fetch(BACKEND_URL + "/run", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({code: job.code, timeout_ms: job.timeoutMs}),
-      signal: AbortSignal.timeout(job.timeoutMs + 5000)   // buffer over the server's own timeout
-    });
-    if (!r.ok){
-      job.resolve("ERROR - backend returned HTTP " + r.status + "\nverdict: BUG (backend error)");
-    } else {
-      const m = await r.json();
-      job.resolve(m.out);
+    const BACKEND_URL = /^(localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(location.hostname)
+      ? location.origin : 'https://sampler-fault-lab-backend.onrender.com';
+    const version = document.getElementById('version');
+    const footVersion = document.getElementById('foot-version');
+    const status = document.getElementById('status');
+    const run = document.getElementById('run');
+    const output = document.getElementById('output');
+    async function checkBackend() {
+      try {
+        const response = await fetch(BACKEND_URL + '/health', {signal: AbortSignal.timeout(30000)});
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        version.textContent = 'NumPy ' + data.version + ' · connected';
+        footVersion.textContent = 'Live backend: NumPy ' + data.version;
+        status.textContent = 'Ready to run';
+      } catch (error) {
+        version.textContent = 'Backend unavailable';
+        footVersion.textContent = 'Live backend unavailable';
+        status.textContent = 'You can copy the code and run it locally';
+      }
     }
-  } catch (err) {
-    job.resolve("HANG - no result in " + (job.timeoutMs/1000) + "s\nverdict: BUG (non-termination)");
-  }
-  running = null;
-  pump();
-}
-
-// ------------------------------------------------------------------ rendering
-function tagEl(cls){ const s=document.createElement("span"); s.className="cls "+cls; s.textContent=cls; return s; }
-
-function renderLegend(){
-  const defs = [
-    ["ROUND","cancellation in C"],["UFLOW","underflow to 0 → inf/nan"],
-    ["LATTICE","int64 grid (cosmetic)"],["RANGE","int64 saturation"],
-    ["INTOVF","int validation overflow"],["DISTORT","acceptance-test collapse"],
-    ["NONTERM","hangs"],["LATENT","real but benign"]
-  ];
-  const L = document.getElementById("legend");
-  defs.forEach(([k,v])=>{ const t=document.createElement("span"); t.className="tag";
-    t.innerHTML="<b>"+k+"</b> "+v; L.appendChild(t); });
-}
-
-function verdictClass(out){
-  const lines = out.split("\n").filter(l=>/verdict\s*:/i.test(l));
-  const v = (lines.length ? lines[lines.length-1] : out);
-  if (/\bHANG\b|\bBUG\b/i.test(v)) return "bug";
-  if (/\bLATENT\b/i.test(v)) return "latent";
-  if (/\bclean\b/i.test(v)) return "clean";
-  return "";
-}
-function colorizeOutput(pre, out){
-  pre.textContent = "";
-  out.split("\n").forEach(line => {
-    const div = document.createElement("div");
-    if (/verdict\s*:/i.test(line)){
-      div.className = "verdictline " + (/\bHANG\b|\bBUG\b/i.test(line) ? "bug" : /LATENT/i.test(line) ? "latent" : /clean/i.test(line) ? "clean" : "");
-    }
-    div.textContent = line;
-    pre.appendChild(div);
-  });
-}
-
-function setStatus(cell, state, label){
-  const st = cell.querySelector(".status");
-  cell.classList.remove("bug","clean","latent","running");
-  st.classList.remove("running","bug","clean","latent");
-  if (state){ cell.classList.add(state); st.classList.add(state); }
-  st.querySelector(".slabel").textContent = label;
-}
-
-async function runCell(cell, code, timeout){
-  const btn = cell.querySelector(".runbtn");
-  const pre = cell.querySelector("pre.out");
-  setStatus(cell, "running", "running…");
-  cell.querySelectorAll("button").forEach(b=>b.disabled=true);
-  const out = await runJob(cell.dataset.id, code, timeout);
-  pre.classList.add("show");
-  colorizeOutput(pre, out);
-  const vc = verdictClass(out);
-  const label = vc==="bug" ? (/HANG/i.test(out)?"HANG":"BUG") : vc==="latent" ? "latent" : vc==="clean" ? "clean" : "done";
-  setStatus(cell, vc, label);
-  cell.querySelectorAll("button").forEach(b=>b.disabled=false);
-  return vc;
-}
-
-function renderCells(){
-  const root = document.getElementById("cells");
-  BUGS.forEach(bug => {
-    const cell = document.createElement("section");
-    cell.className = "cell"; cell.dataset.id = bug.id;
-    const stripe = document.createElement("div"); stripe.className="stripe";
-    const body = document.createElement("div"); body.className="cbody";
-
-    const head = document.createElement("div"); head.className="chead";
-    const name = document.createElement("span"); name.className="sampler"; name.textContent="np.random."+bug.sampler;
-    const classes = document.createElement("span"); classes.className="classes";
-    bug.classes.forEach(c=>classes.appendChild(tagEl(c)));
-    const status = document.createElement("span"); status.className="status";
-    status.innerHTML='<span class="led"></span><span class="slabel">idle</span>';
-    head.append(name, classes, status);
-
-    const mech = document.createElement("div"); mech.className="mech";
-    [["signal","Signal",bug.signal],["source","Source",bug.source],["comments","Comments",bug.comment]].forEach(([key,label,html])=>{
-      const row = document.createElement("div"); row.className="mech-row "+key;
-      const lab = document.createElement("span"); lab.className="mech-label"; lab.textContent=label;
-      const txt = document.createElement("span"); txt.className="mech-text"; txt.innerHTML=html;
-      row.append(lab, txt);
-      mech.appendChild(row);
+    run.addEventListener('click', async () => {
+      run.disabled = true;
+      status.textContent = 'Running sample…';
+      output.classList.add('show');
+      output.textContent = 'Running…';
+      try {
+        const response = await fetch(BACKEND_URL + '/run', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({code:document.getElementById('code').value,timeout_ms:25000}),
+          signal:AbortSignal.timeout(30000)
+        });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        output.textContent = data.out || 'The program produced no output.';
+        status.textContent = 'Finished';
+      } catch (error) {
+        output.textContent = 'The backend did not return a result. You can copy the code and run it locally.\n' + String(error);
+        status.textContent = 'Run failed';
+      } finally { run.disabled = false; }
     });
 
-    const ta = document.createElement("textarea");
-    ta.className="code"; ta.spellcheck=false;
-    ta.value = bug.code;
-    ta.rows = Math.min(16, bug.code.split("\n").length + 1);
-
-    const actions = document.createElement("div"); actions.className="actions";
-    const run = document.createElement("button"); run.className="runbtn"; run.textContent="Run"; run.disabled=true;
-    run.onclick = () => runCell(cell, ta.value, bug.timeout);
-    actions.appendChild(run);
-    if (bug.hang){
-      const hb = document.createElement("button");
-      hb.className="warn hangbtn runbtn"; hb.textContent=bug.hang.label; hb.disabled=true;
-      hb.onclick = () => runCell(cell, bug.hang.code, bug.hang.timeout);
-      actions.appendChild(hb);
+    const CASE_LABELS = {
+      binomial:['Wrong distribution','Legacy draws collapse to zero despite an expected count of 16.'],
+      geometric:['Impossible output','Legacy returns a negative integer outside the distribution’s support.'],
+      negative_binomial:['Wrong distribution','Extreme parameters can saturate legacy outputs; large in-range rates can inflate variance.'],
+      poisson:['Wrong distribution','At very large rates, the variance grows while the mean stays near its target.'],
+      hypergeometric:['Rejected input','An integer-overflow check rejects a mathematically valid large urn.'],
+      dirichlet:['Impossible output','Sparse concentration parameters can produce rows of NaNs in the legacy API.'],
+      standard_t:['Impossible output','Small degrees of freedom can produce infinite values.'],
+      gamma_beta:['Impossible output','Tiny shapes can underflow to exact zero or endpoint values.'],
+      noncentral_chisquare:['Wrong distribution','A Poisson subroutine can carry variance inflation into chi-square draws.'],
+      zipf:['Non-termination','Some legacy parameters can make the rejection loop run indefinitely.'],
+      logseries:['Boundary case','Cancellation occurs, but the returned value remains effectively correct here.']
+    };
+    function renderZoo() {
+      const root = document.getElementById('zoo');
+      BUGS.forEach((bug, index) => {
+        const card = document.createElement('article');
+        card.className = 'exhibit' + (bug.id === 'poisson' ? ' featured' : '');
+        card.id = 'case-' + bug.id;
+        const [label, summary] = CASE_LABELS[bug.id];
+        card.innerHTML = `<p class="exhibit-number">CASE ${String(index+1).padStart(2,'0')}</p>
+          <div class="exhibit-head"><h3>np.random.${bug.sampler}</h3><span class="exhibit-label">${label}</span></div>
+          <p class="exhibit-summary">${summary}</p>
+          <details><summary>Inspect and reproduce</summary><div class="exhibit-body">
+            <p><b>What happens.</b> ${bug.signal}</p>
+            <p><b>Why.</b> ${bug.comment}</p>
+            <p class="exhibit-source"><b>Source.</b> ${bug.source}</p>
+            <label for="code-${bug.id}"><b>Editable Python example</b></label>
+            <textarea id="code-${bug.id}" spellcheck="false" aria-label="Python example for ${bug.sampler}"></textarea>
+            <div class="exhibit-actions"><button type="button" class="case-run">Run example</button><span class="exhibit-status" role="status">Ready</span></div>
+            <pre class="exhibit-output" aria-live="polite"></pre>
+          </div></details>`;
+        const textarea = card.querySelector('textarea');
+        textarea.value = bug.code;
+        card.querySelector('.case-run').addEventListener('click', () => runCase(card, textarea.value, bug.timeout));
+        if (bug.hang) {
+          const hang = document.createElement('button');
+          hang.type = 'button';
+          hang.textContent = bug.hang.label;
+          hang.addEventListener('click', () => runCase(card, bug.hang.code, bug.hang.timeout));
+          card.querySelector('.exhibit-actions').appendChild(hang);
+        }
+        root.appendChild(card);
+      });
     }
-    const pre = document.createElement("pre"); pre.className="out";
-
-    body.append(head, mech, ta, actions, pre);
-    cell.append(stripe, body);
-    root.appendChild(cell);
-  });
-}
-
-document.getElementById("runall").onclick = async () => {
-  const btn = document.getElementById("runall");
-  btn.disabled = true; btn.textContent = "Running…";
-  for (const bug of BUGS){                       // main snippets only; hang button excluded
-    const cell = document.querySelector('.cell[data-id="'+bug.id+'"]');
-    await runCell(cell, cell.querySelector("textarea").value, bug.timeout);
-  }
-  btn.disabled = false; btn.textContent = "Run all diagnostics";
-};
-
-renderLegend();
-renderCells();
-checkBackend();
-</script>
+    async function runCase(card, code, timeout) {
+      const buttons = card.querySelectorAll('button');
+      const status = card.querySelector('.exhibit-status');
+      const result = card.querySelector('.exhibit-output');
+      buttons.forEach(button => button.disabled = true);
+      status.textContent = 'Running…';
+      result.classList.add('show');
+      result.textContent = 'Running…';
+      try {
+        const response = await fetch(BACKEND_URL + '/run', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({code,timeout_ms:timeout}),
+          signal:AbortSignal.timeout(timeout + 5000)
+        });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        result.textContent = data.out || 'The program produced no output.';
+        status.textContent = 'Finished';
+      } catch(error) {
+        result.textContent = 'The backend did not return a result. Copy the code to run it locally.\n' + String(error);
+        status.textContent = 'Run failed';
+      } finally { buttons.forEach(button => button.disabled = false); }
+    }
+    renderZoo();
+    checkBackend();
+  </script>
 </body>
 </html>
