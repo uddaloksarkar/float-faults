@@ -194,7 +194,7 @@
           <div class="fp-equation"><span>The cancellation in the acceptance test</span><code>log P(K = k) = −λ + k log(λ) − log Γ(k + 1)</code></div>
           <p>At <code>λ = 9 × 10¹⁸</code>, compare a count at the center with two counts in the upper tail:</p>
           <div class="fp-table-wrap"><table class="fp-table">
-            <thead><tr><th>Candidate</th><th>Ideal log probability</th><th>Direct binary64 evaluation</th></tr></thead>
+            <thead><tr><th>Candidate</th><th>Ideal log probability</th><th>Illustrative binary64 result</th></tr></thead>
             <tbody>
               <tr><th>k = λ</th><td>−22.74</td><td>0</td></tr>
               <tr><th>k = λ + √λ</th><td>−23.24</td><td>0</td></tr>
@@ -202,7 +202,6 @@
             </tbody>
           </table></div>
           <p class="fp-scale-note">The ideal score falls as <code>k</code> enters the tail; the rounded illustration gives all three candidates the same score. A rejection test using such scores cannot apply the needed tail correction. Here <code>k log(λ) ≈ 3.93 × 10²⁰</code>, where adjacent binary64 numbers are <code>65,536</code> apart.</p>
-          <p class="fp-caveat">The last column evaluates the displayed formula with binary64 <code>log</code> and <code>lgamma</code> to show the loss of information; NumPy uses its own <code>random_loggam</code>, so these are not its internal scores. The variance inflation is measured separately in the plot above.</p>
           <a class="fp-source" href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L3180-L3233" target="_blank" rel="noopener noreferrer">Read NumPy’s accept/reject test →</a>
         </div>
       </div>
