@@ -20,9 +20,7 @@
     .container { width:min(1120px, calc(100% - 44px)); margin:auto; }
     .site-header { background:var(--white); border-bottom:1px solid var(--line); }
     .header-inner { min-height:74px; display:flex; align-items:center; gap:32px; }
-    .wordmark { font:600 15px var(--mono); color:var(--ink); text-decoration:none; white-space:nowrap; }
-    .wordmark span { color:var(--orange); }
-    nav { margin-left:auto; display:flex; gap:26px; font-size:14px; font-weight:600; }
+    nav { display:flex; gap:26px; font-size:14px; font-weight:600; }
     nav a { color:var(--muted); text-decoration:none; }
     nav a:hover { color:var(--green); text-decoration:underline; }
     .hero { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(270px,.7fr); gap:70px; padding:92px 0 96px; align-items:end; }
@@ -135,17 +133,14 @@
     .exhibit-output.show { display:block; }
     @media(max-width:750px) { .zoo-grid { grid-template-columns:1fr; } }
     @media(max-width:850px) { .hero,.split,.scope-inner { grid-template-columns:1fr; gap:36px; } .hero { padding:65px 0; } .hero-note { max-width:400px; } .secondary-list { grid-template-columns:1fr; } }
-    @media(max-width:650px) { body { font-size:16px; } .container { width:min(100% - 32px,1120px); } nav { gap:13px; font-size:12px; } nav a:last-child { display:none; } .header-inner { gap:10px; } section.band { padding:60px 0; } .hero .lead { font-size:18px; } .readout,.companions { grid-template-columns:1fr; } .readout > div + div { border-left:0; border-top:1px solid var(--line); } .demo { padding:21px; } .figure-box { padding:10px; overflow-x:auto; } .figure-box img { min-width:800px; } }
+    @media(max-width:650px) { body { font-size:16px; } .container { width:min(100% - 32px,1120px); } nav { gap:18px; font-size:12px; } .header-inner { gap:10px; } section.band { padding:60px 0; } .hero .lead { font-size:18px; } .readout,.companions { grid-template-columns:1fr; } .readout > div + div { border-left:0; border-top:1px solid var(--line); } .demo { padding:21px; } .figure-box { padding:10px; overflow-x:auto; } .figure-box img { min-width:800px; } }
   </style>
 </head>
 <body>
   <header class="site-header">
     <div class="container header-inner">
-      <a class="wordmark" href="#top">float<span>/</span>faults</a>
       <nav aria-label="Main navigation">
-        <a href="#evidence">Evidence</a>
-        <a href="#mechanism">Why it happens</a>
-        <a href="#try">Try it</a>
+        <a href="#evidence">Highlight: Poisson</a>
         <a href="#more">The zoo</a>
       </nav>
     </div>
