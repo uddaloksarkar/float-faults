@@ -35,8 +35,9 @@
     .button:hover { background:#0d4434; color:#fff; }
     .button.secondary { background:transparent; color:var(--green); }
     .button.secondary:hover { background:var(--green-light); }
-    .case-block .split > div:first-child > h3 { font-size:clamp(28px,3.2vw,38px); line-height:1.14; letter-spacing:-.04em; margin-bottom:20px; }
-    .case-block { border-top:1px solid var(--line); padding:66px 0 74px; }
+    .case-study { border-top:1px solid var(--line); padding:66px 0 74px; }
+    .case-part { margin-top:76px; }
+    .case-part > div:first-child > h3 { font-size:clamp(24px,2.6vw,30px); line-height:1.18; letter-spacing:-.035em; margin-bottom:18px; }
     section.band { border-top:1px solid var(--line); padding:78px 0 86px; }
     .section-intro { max-width:760px; color:var(--muted); font-size:18px; }
     .figure-box { margin:34px 0 0; border:1px solid var(--line); background:var(--white); padding:20px; }
@@ -127,14 +128,14 @@
     .exhibit-output.show { display:block; }
     @media(max-width:750px) { .zoo-grid { grid-template-columns:1fr; } }
     @media(max-width:850px) { .split { grid-template-columns:1fr; gap:36px; } .hero { padding:65px 0; } .secondary-list { grid-template-columns:1fr; } }
-    @media(max-width:650px) { body { font-size:16px; } .container { width:min(100% - 32px,1120px); } nav { gap:18px; font-size:12px; } .header-inner { gap:10px; } .hero .lead { font-size:18px; } .case-block,section.band { padding:60px 0; } .readout,.companions { grid-template-columns:1fr; } .readout > div + div { border-left:0; border-top:1px solid var(--line); } .demo { padding:21px; } .figure-box { padding:10px; overflow-x:auto; } .figure-box img { min-width:800px; } }
+    @media(max-width:650px) { body { font-size:16px; } .container { width:min(100% - 32px,1120px); } nav { gap:18px; font-size:12px; } .header-inner { gap:10px; } .hero .lead { font-size:18px; } .case-study,section.band { padding:60px 0; } .case-part { margin-top:52px; } .readout,.companions { grid-template-columns:1fr; } .readout > div + div { border-left:0; border-top:1px solid var(--line); } .demo { padding:21px; } .figure-box { padding:10px; overflow-x:auto; } .figure-box img { min-width:800px; } }
   </style>
 </head>
 <body>
   <header class="site-header">
     <div class="container header-inner">
       <nav aria-label="Main navigation">
-        <a href="#poisson">Poisson case study</a>
+        <a href="#poisson">Numpy Poisson case study</a>
         <a href="#more">The zoo</a>
       </nav>
     </div>
@@ -151,8 +152,7 @@
       </div>
     </div>
 
-    <section id="poisson" aria-labelledby="poisson-title">
-      <div class="case-block">
+    <section class="case-study" id="poisson" aria-labelledby="poisson-title">
       <div class="container">
         <p class="section-kicker">NumPy Poisson case study</p>
         <h2 id="poisson-title">Variance inflation</h2>
@@ -166,13 +166,9 @@
           <img src="inflation_bugs.png" alt="Measured variance divided by theoretical variance across rates. Poisson stays near 1 at moderate rates, then rises above 1.6 near 10 to the eighteenth. Negative binomial and noncentral chi-square also show inflation at large parameters." loading="lazy">
           <figcaption><strong>Measured variance inflation.</strong> The left plot is the central finding. The other two show NumPy distributions that use a Poisson draw internally. The dashed line marks the target ratio of 1.</figcaption>
         </figure>
-      </div>
-      </div>
 
-      <div class="case-block">
-      <div class="container split">
+      <div class="split case-part">
         <div>
-          <p class="section-kicker">Why it happens</p>
           <h3>Rounding error compromises the sampler’s internal decision.</h3>
           <p class="section-intro">At large λ, NumPy proposes an integer <code>k</code> from a hat distribution, then uses an acceptance test to convert the distribution of <code>k</code> back to a Poisson distribution. For some proposals, the test needs to evaluate the Poisson log probability of <code>k</code>.</p>
           <p class="section-intro">NumPy computes this log probability by subtracting terms near <code>10²⁰</code>. Rounding can make this subtraction return zero, considerably distorting the acceptance test.</p>
@@ -192,12 +188,9 @@
           <a class="fp-source" href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L3180-L3233" target="_blank" rel="noopener noreferrer">Read NumPy’s accept/reject test →</a>
         </div>
       </div>
-      </div>
 
-      <div class="case-block">
-      <div class="container split">
+      <div class="split case-part">
         <div>
-          <p class="section-kicker">Reproduce it</p>
           <h3>Run the measurement yourself.</h3>
           <p class="section-intro">This snippet samples NumPy’s <code>Generator.poisson</code>, then compares the measured variance with λ.</p>
           <p class="section-intro" style="font-size:15px">You can edit the code before running it. Results come from the connected Python backend, whose NumPy version is shown in the panel. Sampling is empirical, so the ratio varies slightly between runs.</p>
