@@ -182,8 +182,8 @@
         <div>
           <p class="section-kicker">Why it happens</p>
           <h3>Rounding error compromises the sampler’s internal decision.</h3>
-          <p class="section-intro">At large λ, NumPy proposes a count <code>k</code> from a broader distribution, then uses an acceptance test to trim the tails back to a Poisson distribution. For some proposals, the test needs to evaluate the Poisson log probability of <code>k</code>.</p>
-          <p class="section-intro">NumPy computes this log probability by subtracting terms near <code>10²⁰</code>. Rounding can erase the small differences between central and tail proposals, so the measured output can be too wide.</p>
+          <p class="section-intro">At large λ, NumPy proposes an integer <code>k</code> from a hat distribution, then uses an acceptance test to convert the distribuion of <code>k</code> back to a Poisson distribution. For some proposals, the test needs to evaluate the Poisson log probability of <code>k</code>.</p>
+          <p class="section-intro">NumPy computes this log probability by subtracting terms near <code>10²⁰</code>. Rounding can make this subtraction return zero, considerably distorting the acceptance test.</p>
         </div>
         <div class="fp-analysis">
           <div class="fp-equation"><span>The cancellation in the acceptance test</span><code>log P(K = k) = −λ + k log(λ) − log Γ(k + 1)</code></div>
@@ -196,7 +196,7 @@
               <tr><th>k = λ + 2√λ</th><td>−24.74</td><td>0</td></tr>
             </tbody>
           </table></div>
-          <p class="fp-scale-note">The ideal score falls as <code>k</code> enters the tail; the rounded illustration gives all three candidates the same score. A rejection test using such scores cannot apply the needed tail correction. Here <code>k log(λ) ≈ 3.93 × 10²⁰</code>, where adjacent binary64 numbers are <code>65,536</code> apart.</p>
+          <p class="fp-scale-note">The rounded illustration gives all three candidates the same score. A rejection test using such scores cannot apply the needed correction to convert the hat distribution back to a Poisson distribution. Here <code>k log(λ) ≈ 3.93 × 10²⁰</code>, where adjacent binary64 numbers are <code>65,536</code> apart.</p>
           <a class="fp-source" href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L3180-L3233" target="_blank" rel="noopener noreferrer">Read NumPy’s accept/reject test →</a>
         </div>
       </div>
