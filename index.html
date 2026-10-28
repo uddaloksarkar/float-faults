@@ -104,7 +104,8 @@
     .zoo-key span { font:500 11px var(--mono); border:1px solid var(--line); color:var(--muted); padding:5px 8px; background:var(--white); }
     .zoo-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
     .exhibit { background:var(--white); border:1px solid var(--line); padding:25px; min-width:0; }
-    .exhibit.featured { border-top:4px solid var(--orange); }
+    .exhibit.featured { grid-column:1 / -1; border-top:4px solid var(--orange); }
+    .exhibit:last-child { grid-column:1 / -1; }
     .exhibit-head { display:flex; gap:12px; align-items:start; justify-content:space-between; }
     .exhibit-number { font:600 12px var(--mono); color:var(--green); margin:0 0 11px; }
     .exhibit h3 { overflow-wrap:anywhere; font:600 18px/1.35 var(--mono); letter-spacing:-.025em; margin:0 0 12px; }
@@ -149,12 +150,12 @@
         <h1>Sampler error zoo.</h1>
         <p class="lead">A sampler can return the wrong distribution, an impossible value, or no value at all. Here are reproducible NumPy cases where finite precision or approximations change the result, with the code and source path for each one.</p>
         <div class="hero-actions">
-          <a class="button" href="#more">Explore all 9 cases</a>
+          <a class="button" href="#more">Explore all 10 cases</a>
           <a class="button secondary" href="#poisson">Start with Poisson</a>
         </div>
       </div>
       <aside class="hero-note" aria-label="Guide to this catalog">
-        <div class="number">9</div>
+        <div class="number">10</div>
         <p><strong>NumPy sampler cases.</strong> Each card examines one NumPy sampler and shows how finite precision can jeopardize its intended distribution.</p>
       </aside>
     </div>
@@ -182,7 +183,7 @@
         <div>
           <p class="section-kicker">Why it happens</p>
           <h3>Rounding error compromises the sampler’s internal decision.</h3>
-          <p class="section-intro">At large λ, NumPy proposes an integer <code>k</code> from a hat distribution, then uses an acceptance test to convert the distribuion of <code>k</code> back to a Poisson distribution. For some proposals, the test needs to evaluate the Poisson log probability of <code>k</code>.</p>
+          <p class="section-intro">At large λ, NumPy proposes an integer <code>k</code> from a hat distribution, then uses an acceptance test to convert the distribution of <code>k</code> back to a Poisson distribution. For some proposals, the test needs to evaluate the Poisson log probability of <code>k</code>.</p>
           <p class="section-intro">NumPy computes this log probability by subtracting terms near <code>10²⁰</code>. Rounding can make this subtraction return zero, considerably distorting the acceptance test.</p>
         </div>
         <div class="fp-analysis">
@@ -239,7 +240,7 @@ print("mean error / standard deviation:",
     <section class="band" id="more">
       <div class="container">
         <p class="section-kicker">The zoo</p>
-        <h2>Nine NumPy sampler cases.</h2>
+        <h2>Ten NumPy sampler cases.</h2>
         <p class="section-intro">Open a card for the failure, NumPy source, and runnable code. <a href="https://numpy.org/doc/stable/reference/random/legacy.html" target="_blank" rel="noopener noreferrer">Legacy</a> covers <code>RandomState</code> and module-level draws such as <code>np.random.poisson(...)</code>; <a href="https://numpy.org/doc/stable/reference/random/generator.html" target="_blank" rel="noopener noreferrer">Generator</a> comes from <code>default_rng</code>. Their sampling algorithms can differ. Tags show which interface is affected in NumPy 2.4.3.</p>
         <div class="zoo-key" aria-label="Sampler failure modes"><span>Distorted frequencies</span><span>Out-of-support value</span><span>Non-termination</span></div>
         <div class="zoo-grid" id="zoo"></div>
@@ -249,6 +250,52 @@ print("mean error / standard deviation:",
   </main>
   <script>
 const BUGS = [
+  {
+    id:"poisson", sampler:"poisson",
+    timeout:20000,
+    code:
+`import numpy as np
+lam = 9e18
+x = np.random.default_rng(0).poisson(lam, 300000)
+d = (x - np.int64(int(lam))).astype(float)          # stable: |d| ~ std << lam
+print("[DISTORT] var/lam =", round(float(d.var()/lam),3), "(should be 1.0)")
+print("          mean bias / std =", round(float(d.mean()/lam**0.5),3), "(mean is correct)")
+print("[LATTICE] output grid spacing =", int(np.diff(np.unique(x)).min()),
+      " | ulp(lam) =", int(np.spacing(np.float64(lam))))
+print("verdict:", "BUG - variance inflated ~1.66x by PTRS cancellation (+ cosmetic 1024-lattice)")`
+  },
+  {
+    id:"negative_binomial", sampler:"negative_binomial",
+    timeout:15000,
+    code:
+`import numpy as np
+imax, imin = np.iinfo(np.int64).max, np.iinfo(np.int64).min
+n, p = 1, 2.0**-62
+L = np.random.RandomState(1).negative_binomial(n, p, 5000)
+print("[RANGE] Legacy: min", L.min(), "max", L.max(), " #saturated to INT64 bound:", int(((L==imax)|(L==imin)).sum()))
+try:
+    np.random.default_rng(1).negative_binomial(n, p, 5000); print("        Generator: (no error)")
+except Exception as e:
+    print("        Generator raises:", type(e).__name__)
+# DISTORT: tight gamma -> ~Poisson(mean); inherits PTRS inflation
+mt = 1e17; nn = 1e6*mt; pp = nn/(nn+mt)
+mean, var = nn*(1-pp)/pp, nn*(1-pp)/pp**2
+x = np.random.default_rng(0).negative_binomial(nn, pp, 300000)
+print("[DISTORT] mean=1e17: var/theory =", round(float(((x-mean).var())/var),3), "(should be 1.0)")
+print("verdict:", "BUG - Legacy int64 saturation + inherited PTRS variance inflation")`
+  },
+  {
+    id:"noncentral_chisquare", sampler:"noncentral_chisquare",
+    timeout:20000,
+    code:
+`import numpy as np
+df, nonc = 0.5, 2e18
+x = np.random.default_rng(0).noncentral_chisquare(df, nonc, 300000)
+mean, var = df + nonc, 2*(df + 2*nonc)
+print("df=0.5, nonc=2e18: var/theory =", round(float(((x-mean).var())/var),3), "(should be 1.0)")
+print("path: chisq(df + 2*Poisson(nonc/2))  ->  inherits PTRS inflation")
+print("verdict:", "BUG - variance inflated (inherited from PTRS Poisson)")`
+  },
   {
     id:"binomial", sampler:"binomial",
     timeout:15000,
@@ -275,51 +322,29 @@ print("Generator  :", G.min(), "(large but finite, ~1/p)")
 print("verdict:", "BUG - Legacy geometric returns INT64_MIN (out of support)" if (L==imin).all() else "clean")`
   },
   {
-    id:"negative_binomial", sampler:"negative_binomial",
+    id:"standard_gamma", sampler:"standard_gamma",
     timeout:15000,
     code:
 `import numpy as np
-imax, imin = np.iinfo(np.int64).max, np.iinfo(np.int64).min
-n, p = 1, 2.0**-62
-L = np.random.RandomState(1).negative_binomial(n, p, 5000)
-print("[RANGE] Legacy: min", L.min(), "max", L.max(), " #saturated to INT64 bound:", int(((L==imax)|(L==imin)).sum()))
-try:
-    np.random.default_rng(1).negative_binomial(n, p, 5000); print("        Generator: (no error)")
-except Exception as e:
-    print("        Generator raises:", type(e).__name__)
-# DISTORT: tight gamma -> ~Poisson(mean); inherits PTRS inflation
-mt = 1e17; nn = 1e6*mt; pp = nn/(nn+mt)
-mean, var = nn*(1-pp)/pp, nn*(1-pp)/pp**2
-x = np.random.default_rng(0).negative_binomial(nn, pp, 300000)
-print("[DISTORT] mean=1e17: var/theory =", round(float(((x-mean).var())/var),3), "(should be 1.0)")
-print("verdict:", "BUG - Legacy int64 saturation + inherited PTRS variance inflation")`
+a = 2.0**-12
+for name, rng in [("Legacy", np.random.RandomState(1)),
+                  ("Generator", np.random.default_rng(1))]:
+    g = rng.standard_gamma(a, 50000)
+    print(name, "gamma exact zero:", int((g == 0).sum()), "/ 50000")
+print("cause: small-shape power underflows to zero")`
   },
   {
-    id:"poisson", sampler:"poisson",
-    timeout:20000,
-    code:
-`import numpy as np
-lam = 9e18
-x = np.random.default_rng(0).poisson(lam, 300000)
-d = (x - np.int64(int(lam))).astype(float)          # stable: |d| ~ std << lam
-print("[DISTORT] var/lam =", round(float(d.var()/lam),3), "(should be 1.0)")
-print("          mean bias / std =", round(float(d.mean()/lam**0.5),3), "(mean is correct)")
-print("[LATTICE] output grid spacing =", int(np.diff(np.unique(x)).min()),
-      " | ulp(lam) =", int(np.spacing(np.float64(lam))))
-print("verdict:", "BUG - variance inflated ~1.66x by PTRS cancellation (+ cosmetic 1024-lattice)")`
-  },
-  {
-    id:"dirichlet", sampler:"dirichlet",
+    id:"beta", sampler:"beta",
     timeout:15000,
     code:
 `import numpy as np
-a = 2.0**-10                        # ~9.8e-4, a routine sparse-prior value
-L = np.random.RandomState(7).dirichlet([a,a,a], 20000)
-G = np.random.default_rng(7).dirichlet([a,a,a], 20000)
-print("alpha = 2**-10:")
-print("  Legacy    NaN rows:", int(np.isnan(L).any(1).sum()), "/ 20000")
-print("  Generator NaN rows:", int(np.isnan(G).any(1).sum()), "/ 20000")
-print("verdict:", "BUG - Legacy dirichlet 0/0 -> NaN for small alpha; Generator immune")`
+a = 2.0**-12
+for name, rng in [("Legacy", np.random.RandomState(1)),
+                  ("Generator", np.random.default_rng(1))]:
+    b = rng.beta(a, a, 50000)
+    endpoints = (b == 0) | (b == 1)
+    print(name, "beta at 0 or 1:", int(endpoints.sum()), "/ 50000")
+print("cause: small-shape beta arithmetic rounds to endpoints")`
   },
   {
     id:"standard_t", sampler:"standard_t",
@@ -333,29 +358,17 @@ print("cause: chisquare(df) underflows to 0  ->  t = Z / sqrt(0) = inf")
 print("verdict:", "BUG - standard_t returns +/-inf for small df" if inf>0 else "clean")`
   },
   {
-    id:"gamma_beta", sampler:"standard_gamma / beta",
+    id:"dirichlet", sampler:"dirichlet",
     timeout:15000,
     code:
 `import numpy as np
-a = 2.0**-12
-gz = int((np.random.default_rng(1).standard_gamma(a, 50000) == 0).sum())
-b  = np.random.default_rng(1).beta(a, a, 50000)
-print("shape = 2**-12:")
-print("  gamma exact-0 :", gz, "/ 50000   (support is the OPEN interval (0, inf))")
-print("  beta in {0,1} :", int(((b==0)|(b==1)).sum()), "/ 50000")
-print("verdict:", "BUG - open-support draws underflow to exactly 0")`
-  },
-  {
-    id:"noncentral_chisquare", sampler:"noncentral_chisquare",
-    timeout:20000,
-    code:
-`import numpy as np
-df, nonc = 0.5, 2e18
-x = np.random.default_rng(0).noncentral_chisquare(df, nonc, 300000)
-mean, var = df + nonc, 2*(df + 2*nonc)
-print("df=0.5, nonc=2e18: var/theory =", round(float(((x-mean).var())/var),3), "(should be 1.0)")
-print("path: chisq(df + 2*Poisson(nonc/2))  ->  inherits PTRS inflation")
-print("verdict:", "BUG - variance inflated (inherited from PTRS Poisson)")`
+a = 2.0**-10                        # ~9.8e-4, a routine sparse-prior value
+L = np.random.RandomState(7).dirichlet([a,a,a], 20000)
+G = np.random.default_rng(7).dirichlet([a,a,a], 20000)
+print("alpha = 2**-10:")
+print("  Legacy    NaN rows:", int(np.isnan(L).any(1).sum()), "/ 20000")
+print("  Generator NaN rows:", int(np.isnan(G).any(1).sum()), "/ 20000")
+print("verdict:", "BUG - Legacy dirichlet 0/0 -> NaN for small alpha; Generator immune")`
   },
   {
     id:"zipf", sampler:"zipf",
@@ -458,11 +471,17 @@ print("returned (unexpected)")`
         why:`Both paths divide a normal draw by the square root of a gamma draw with shape <code>df/2</code>. At small shape, that gamma draw can underflow to exactly zero; dividing by its square root produces infinity.`,
         source:`See <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L171-L176" target="_blank" rel="noopener noreferrer">legacy_standard_t</a> and <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L542-L548" target="_blank" rel="noopener noreferrer">random_standard_t</a>.`
       },
-      gamma_beta: {
+      standard_gamma: {
         apis:['Legacy','Generator'],
-        what:`With shape <code>2**-12</code>, both APIs can return exact zero from <code>standard_gamma</code> and exact 0 or 1 from <code>beta</code>, even though the ideal distributions have open support.`,
-        why:`For gamma shape below 1, both implementations evaluate a power like <code>U**(1/shape)</code>, which can underflow to zero. Small-shape beta sampling also involves powers and finite-precision endpoint rounding; <code>Generator.beta</code> uses its own Johnk-style branch, so its endpoint values are not simply inherited from gamma normalization.`,
-        source:`See the <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L47-L75" target="_blank" rel="noopener noreferrer">Legacy gamma</a>, <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L220-L250" target="_blank" rel="noopener noreferrer">Generator gamma</a>, the <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L188-L224" target="_blank" rel="noopener noreferrer">Legacy beta</a> branch, and the <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L411-L463" target="_blank" rel="noopener noreferrer">Generator beta</a> branch.`
+        what:`With shape <code>2**-12</code>, both APIs return exact zero from <code>standard_gamma</code>, although the mathematical gamma distribution has support on positive real numbers.`,
+        why:`For shape below one, both implementations use a power factor like <code>U**(1/shape)</code>. At this shape, many positive results lie below the smallest representable positive binary64 value and round to zero. This gamma underflow also matters to samplers that consume gamma draws, including Student t and Legacy dirichlet.`,
+        source:`See <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L47-L75" target="_blank" rel="noopener noreferrer">Legacy gamma</a> and <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L220-L250" target="_blank" rel="noopener noreferrer">Generator gamma</a>.`
+      },
+      beta: {
+        apis:['Legacy','Generator'],
+        what:`With both shapes at <code>2**-12</code>, both APIs return exact 0 or 1 from <code>beta</code>, although the mathematical beta distribution has support on the open interval (0, 1).`,
+        why:`The Legacy branch uses gamma draws and normalizes their ratio; small values can underflow before normalization. Generator uses a separate Johnk-style small-shape branch with powers and a ratio, so its endpoints cannot all be attributed to gamma normalization. Underflow and rounding in those separate paths place some results at 0 or 1.`,
+        source:`See <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L188-L224" target="_blank" rel="noopener noreferrer">Legacy beta</a> and <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L411-L463" target="_blank" rel="noopener noreferrer">Generator beta</a>.`
       },
       noncentral_chisquare: {
         apis:['Legacy','Generator'],
@@ -485,7 +504,8 @@ print("returned (unexpected)")`
       poisson:['Distorted frequencies','At very large rates, the variance grows while the mean stays near its target.'],
       dirichlet:['Out-of-support value','Sparse concentration parameters can produce rows of NaNs in the Legacy API.'],
       standard_t:['Out-of-support value','Small degrees of freedom can produce infinite values.'],
-      gamma_beta:['Out-of-support value','Tiny shapes can underflow to exact zero or endpoint values.'],
+      standard_gamma:['Out-of-support value','Tiny gamma shapes can underflow to exact zero.'],
+      beta:['Out-of-support value','Tiny beta shapes can round to endpoints 0 or 1.'],
       noncentral_chisquare:['Distorted frequencies','A Poisson subroutine can carry variance inflation into chi-square draws.'],
       zipf:['Non-termination','Some Legacy parameters can make the rejection loop run indefinitely.']
     };
@@ -498,7 +518,7 @@ print("returned (unexpected)")`
         const [label, summary] = CASE_LABELS[bug.id];
         const detail = CASE_DETAILS[bug.id];
         card.innerHTML = `<p class="exhibit-number">CASE ${String(index+1).padStart(2,'0')}</p>
-          <div class="exhibit-head"><h3>${bug.id === 'gamma_beta' ? 'standard_gamma + beta' : bug.sampler}</h3><span class="exhibit-label">${label}</span></div>
+          <div class="exhibit-head"><h3>${bug.sampler}</h3><span class="exhibit-label">${label}</span></div>
           <div class="api-tags" aria-label="Affected NumPy APIs">${detail.apis.map(api => '<span class="api-tag">' + api + '</span>').join('')}</div>
           <p class="exhibit-summary">${summary}</p>
           <details><summary>Inspect and reproduce</summary><div class="exhibit-body">
