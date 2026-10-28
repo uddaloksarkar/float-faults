@@ -149,12 +149,12 @@
         <h1>Sampler error zoo.</h1>
         <p class="lead">A sampler can return the wrong distribution, an impossible value, or no value at all. Here are reproducible NumPy cases where finite precision or approximations change the result, with the code and source path for each one.</p>
         <div class="hero-actions">
-          <a class="button" href="#more">Explore all 11 cases</a>
+          <a class="button" href="#more">Explore all 9 cases</a>
           <a class="button secondary" href="#poisson">Start with Poisson</a>
         </div>
       </div>
       <aside class="hero-note" aria-label="Guide to this catalog">
-        <div class="number">11</div>
+        <div class="number">9</div>
         <p><strong>NumPy sampler cases.</strong> Each card examines one NumPy sampler and shows how finite precision can jeopardize its intended distribution.</p>
       </aside>
     </div>
@@ -168,7 +168,7 @@
         <div class="readout" aria-label="Poisson variance comparison">
           <div><span>Ideal Poisson variance / λ</span><strong>1.00</strong></div>
           <div><span>NumPy at λ = 9 × 10¹⁸</span><strong><em>about 1.66</em></strong></div>
-          <div><span>Affected NumPy APIs</span><strong>Generator + RandomState</strong></div>
+          <div><span>Affected NumPy APIs</span><strong>Generator + Legacy</strong></div>
         </div>
         <figure class="figure-box">
           <img src="inflation_bugs.png" alt="Measured variance divided by theoretical variance across rates. Poisson stays near 1 at moderate rates, then rises above 1.6 near 10 to the eighteenth. Negative binomial and noncentral chi-square also show inflation at large parameters." loading="lazy">
@@ -182,8 +182,8 @@
         <div>
           <p class="section-kicker">Why it happens</p>
           <h3>Rounding error compromises the sampler’s internal decision.</h3>
-          <p class="section-intro">At large λ, NumPy proposes a count <code>k</code> from a broader distribution, then uses an acceptance test to trim the tails back to a Poisson distribution. Some proposals take a fast accept path. For the others, the test needs the Poisson log probability of <code>k</code>.</p>
-          <p class="section-intro">That log probability changes by only about 0.5 between a central count and one standard deviation into the tail. But NumPy computes it by subtracting terms near <code>10²⁰</code>. Rounding can erase the small difference, so the test no longer rejects tail proposals at the intended rate. The measured output is therefore too wide.</p>
+          <p class="section-intro">At large λ, NumPy proposes a count <code>k</code> from a broader distribution, then uses an acceptance test to trim the tails back to a Poisson distribution. For some proposals, the test needs to evaluate the Poisson log probability of <code>k</code>.</p>
+          <p class="section-intro">NumPy computes this log probability by subtracting terms near <code>10²⁰</code>. Rounding can erase the small differences between central and tail proposals, so the measured output can be too wide.</p>
         </div>
         <div class="fp-analysis">
           <div class="fp-equation"><span>The cancellation in the acceptance test</span><code>log P(K = k) = −λ + k log(λ) − log Γ(k + 1)</code></div>
@@ -208,7 +208,7 @@
           <p class="section-kicker">Reproduce it</p>
           <h3>Run the measurement yourself.</h3>
           <p class="section-intro">This snippet samples NumPy’s <code>Generator.poisson</code>, then compares the measured variance with λ.</p>
-          <p class="section-intro" style="font-size:15px">You can edit the code before running it. Results come from the connected Python backend, whose NumPy version is shown in the panel. Sampling is empirical, so the ratio varies slightly between runs and versions.</p>
+          <p class="section-intro" style="font-size:15px">You can edit the code before running it. Results come from the connected Python backend, whose NumPy version is shown in the panel. Sampling is empirical, so the ratio varies slightly between runs.</p>
         </div>
         <div class="demo">
           <div class="demo-top"><span class="section-kicker">Live NumPy example</span><span class="version" id="version">Checking backend…</span></div>
@@ -239,9 +239,9 @@ print("mean error / standard deviation:",
     <section class="band" id="more">
       <div class="container">
         <p class="section-kicker">The zoo</p>
-        <h2>Eleven NumPy sampler cases.</h2>
-        <p class="section-intro">Open any exhibit for its mechanism, NumPy source, and an editable reproduction. API tags identify the affected path in NumPy 2.4.3: Legacy means <code>RandomState</code> or <code>np.random.*</code>; Generator means <code>default_rng()</code>. “Boundary case” marks a numerical collapse without a meaningful failure in the shown regime.</p>
-        <div class="zoo-key" aria-label="Case labels"><span>Wrong distribution</span><span>Impossible output</span><span>Rejected input</span><span>Non-termination</span><span>Boundary case</span></div>
+        <h2>Nine NumPy sampler cases.</h2>
+        <p class="section-intro">Open any exhibit for its mechanism, NumPy source, and an editable reproduction. API tags identify the affected path in NumPy 2.4.3: Legacy means <code>RandomState</code> or <code>np.random.*</code>; Generator means <code>default_rng()</code>.</p>
+        <div class="zoo-key" aria-label="Case labels"><span>Wrong distribution</span><span>Impossible output</span><span>Non-termination</span></div>
         <div class="zoo-grid" id="zoo"></div>
         <p class="zoo-scope">This catalog starts with NumPy because its implementations and runnable examples make the faults concrete. Other libraries may use different algorithms and thresholds, so each one needs its own source-level analysis.</p>
       </div>
@@ -257,9 +257,9 @@ const BUGS = [
 p, n = 2.0**-54, 16*2**54   # true E[X] = 16
 x = np.random.RandomState(1).binomial(n, p, 5000)
 g = np.random.default_rng(1).binomial(n, p, 5000)
-print("RandomState: mean =", x.mean())
+print("Legacy: mean =", x.mean())
 print("Generator  : mean =", round(float(g.mean()), 2))
-print("verdict:", "BUG - legacy collapses to zero; Generator mean shown above" if x.mean()==0 else "unexpected legacy result")`
+print("verdict:", "BUG - Legacy collapses to zero; Generator mean shown above" if x.mean()==0 else "unexpected Legacy result")`
   },
   {
     id:"geometric", sampler:"geometric",
@@ -270,9 +270,9 @@ p = 2.0**-58
 L = np.random.RandomState(1).geometric(p, 20)
 G = np.random.default_rng(1).geometric(p, 20)
 imin = np.iinfo(np.int64).min
-print("legacy min :", L.min(), "   all == INT64_MIN?", bool((L==imin).all()))
+print("Legacy min :", L.min(), "   all == INT64_MIN?", bool((L==imin).all()))
 print("Generator  :", G.min(), "(large but finite, ~1/p)")
-print("verdict:", "BUG - legacy geometric returns INT64_MIN (out of support)" if (L==imin).all() else "clean")`
+print("verdict:", "BUG - Legacy geometric returns INT64_MIN (out of support)" if (L==imin).all() else "clean")`
   },
   {
     id:"negative_binomial", sampler:"negative_binomial",
@@ -282,7 +282,7 @@ print("verdict:", "BUG - legacy geometric returns INT64_MIN (out of support)" if
 imax, imin = np.iinfo(np.int64).max, np.iinfo(np.int64).min
 n, p = 1, 2.0**-62
 L = np.random.RandomState(1).negative_binomial(n, p, 5000)
-print("[RANGE] legacy: min", L.min(), "max", L.max(), " #saturated to INT64 bound:", int(((L==imax)|(L==imin)).sum()))
+print("[RANGE] Legacy: min", L.min(), "max", L.max(), " #saturated to INT64 bound:", int(((L==imax)|(L==imin)).sum()))
 try:
     np.random.default_rng(1).negative_binomial(n, p, 5000); print("        Generator: (no error)")
 except Exception as e:
@@ -292,7 +292,7 @@ mt = 1e17; nn = 1e6*mt; pp = nn/(nn+mt)
 mean, var = nn*(1-pp)/pp, nn*(1-pp)/pp**2
 x = np.random.default_rng(0).negative_binomial(nn, pp, 300000)
 print("[DISTORT] mean=1e17: var/theory =", round(float(((x-mean).var())/var),3), "(should be 1.0)")
-print("verdict:", "BUG - legacy int64 saturation + inherited PTRS variance inflation")`
+print("verdict:", "BUG - Legacy int64 saturation + inherited PTRS variance inflation")`
   },
   {
     id:"poisson", sampler:"poisson",
@@ -309,19 +309,6 @@ print("[LATTICE] output grid spacing =", int(np.diff(np.unique(x)).min()),
 print("verdict:", "BUG - variance inflated ~1.66x by PTRS cancellation (+ cosmetic 1024-lattice)")`
   },
   {
-    id:"hypergeometric", sampler:"hypergeometric",
-    timeout:15000,
-    code:
-`import numpy as np
-ng, nb, ns = 2**62, 2**62, 1        # valid urn: P(draw good) = 0.5
-for name, r in [("legacy", np.random.RandomState(1)), ("Generator", np.random.default_rng(1))]:
-    try:
-        r.hypergeometric(ng, nb, ns, 20); print(name, "accepted")
-    except Exception as e:
-        print(name, "raises:", type(e).__name__, "-", str(e)[:60])
-print("verdict: BUG - legacy int64 overflow (2**62+2**62 wraps) rejects a valid urn")`
-  },
-  {
     id:"dirichlet", sampler:"dirichlet",
     timeout:15000,
     code:
@@ -330,9 +317,9 @@ a = 2.0**-10                        # ~9.8e-4, a routine sparse-prior value
 L = np.random.RandomState(7).dirichlet([a,a,a], 20000)
 G = np.random.default_rng(7).dirichlet([a,a,a], 20000)
 print("alpha = 2**-10:")
-print("  legacy    NaN rows:", int(np.isnan(L).any(1).sum()), "/ 20000")
+print("  Legacy    NaN rows:", int(np.isnan(L).any(1).sum()), "/ 20000")
 print("  Generator NaN rows:", int(np.isnan(G).any(1).sum()), "/ 20000")
-print("verdict:", "BUG - legacy dirichlet 0/0 -> NaN for small alpha; Generator immune")`
+print("verdict:", "BUG - Legacy dirichlet 0/0 -> NaN for small alpha; Generator immune")`
   },
   {
     id:"standard_t", sampler:"standard_t",
@@ -379,33 +366,20 @@ a = 1.0000001
 t = np.random.default_rng(0).zipf(a, 20000)          # Generator: Umin guard -> instant
 print("Generator zipf(a=1.0000001): ok, max =", t.max())
 frac = (a-1)*np.log(2.0**63)
-print("legacy acceptance fraction ~ (a-1)*ln(2**63) =", round(frac,7),
+print("Legacy acceptance fraction ~ (a-1)*ln(2**63) =", round(frac,7),
       " -> ~", int(1/frac), "rejects per accepted sample")
 with np.errstate(invalid='ignore'):
     bad = np.float64(2.0**63).astype(np.int64)
 print("[LATENT] (int64)(2**63) =", bad, "== INT64_MIN?", bad == np.iinfo(np.int64).min)
-print("verdict: BUG - legacy hangs (no Umin / a>=1025 guard); use 'Run legacy (hangs)' to see it")`,
+print("verdict: BUG - Legacy hangs (no Umin / a>=1025 guard); use 'Run Legacy (hangs)' to see it")`,
     hang:{
-      label:"Run legacy zipf (hangs — times out)", timeout:6000,
+      label:"Run Legacy zipf (hangs — times out)", timeout:6000,
       code:
 `import numpy as np
 # Legacy zipf near a=1 rejects ~forever: this call never returns.
 np.random.RandomState(0).zipf(1.0000001, 20000)
 print("returned (unexpected)")`
     }
-  },
-  {
-    id:"logseries", sampler:"logseries",
-    timeout:15000,
-    code:
-`import numpy as np
-for k in (40, 54, 58):
-    p = 2.0**-k
-    L = np.random.RandomState(1).logseries(p, 50000)
-    pge2 = p/2                            # leading-order P(X >= 2) for tiny p
-    print(f"p=2**-{k}: fl(1-p)==1? {1.0-p==1.0}  legacy all==1? {bool((L==1).all())}"
-          f"  approx P(X>=2)={pge2:.1e}")
-print("verdict: LATENT - real cancellation, but benign (returns the correct value 1)")`
   }
 ];
     const BACKEND_URL = /^(localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(location.hostname)
@@ -450,20 +424,20 @@ print("verdict: LATENT - real cancellation, but benign (returns the correct valu
     const CASE_DETAILS = {
       binomial: {
         apis:['Legacy'],
-        what:`With <code>p = 2**-54</code> and <code>n = 16 × 2**54</code>, <code>RandomState.binomial</code> returns 0 on every draw although the expected count is 16. <code>Generator</code> returns a mean near 16 in NumPy 2.4.3.`,
-        why:`The legacy inversion first rounds <code>1 - p</code> to 1 in binary64. It then computes <code>exp(n log(1 - p)) = 1</code> for the zero-count probability, so every uniform draw passes the zero-count test. <code>Generator</code> uses <code>log1p(-p)</code> and retains the small probability.`,
+        what:`With <code>p = 2**-54</code> and <code>n = 16 × 2**54</code>, Legacy binomial returns 0 on every draw although the expected count is 16. Generator returns a mean near 16 in NumPy 2.4.3.`,
+        why:`The Legacy inversion first rounds <code>1 - p</code> to 1 in binary64. It then computes <code>exp(n log(1 - p)) = 1</code> for the zero-count probability, so every uniform draw passes the zero-count test. Generator uses <code>log1p(-p)</code> and retains the small probability.`,
         source:`Compare <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L231-L265" target="_blank" rel="noopener noreferrer">legacy_random_binomial_inversion</a> with <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L765-L795" target="_blank" rel="noopener noreferrer">random_binomial_inversion</a>.`
       },
       geometric: {
         apis:['Legacy'],
-        what:`For <code>p = 2**-58</code>, <code>RandomState.geometric</code> returns <code>INT64_MIN</code> in the tested build, outside the distribution's support of positive integers. <code>Generator</code> returns large positive counts.`,
-        why:`The legacy denominator is <code>log(1 - p)</code>. Binary64 rounds <code>1 - p</code> to 1, making the denominator zero; the resulting infinite quotient is converted to an invalid integer. <code>Generator</code> uses <code>log1p(-p)</code> and guards the result range.`,
+        what:`For <code>p = 2**-58</code>, Legacy geometric returns <code>INT64_MIN</code> in the tested build, outside the distribution's support of positive integers. Generator returns large positive counts.`,
+        why:`The Legacy denominator is <code>log(1 - p)</code>. Binary64 rounds <code>1 - p</code> to 1, making the denominator zero; the resulting infinite quotient is converted to an invalid integer. Generator uses <code>log1p(-p)</code> and guards the result range.`,
         source:`See <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L457-L465" target="_blank" rel="noopener noreferrer">legacy_geometric_inversion</a> and <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L990-L1007" target="_blank" rel="noopener noreferrer">random_geometric_inversion</a>.`
       },
       negative_binomial: {
         apis:['Legacy','Generator'],
-        what:`There are two effects. For an extreme rate, <code>RandomState</code> returns values at the int64 limit while <code>Generator</code> rejects the input. For a large but in-range rate, <code>Generator</code> shows inflated variance; the shared Poisson path also affects legacy sampling.`,
-        why:`Both implementations draw a gamma rate and pass it to a Poisson sampler. The legacy path has no pre-check for an unsafe Poisson rate, allowing integer saturation. <code>Generator</code> checks that range, but an allowed high rate can still inherit the Poisson acceptance-test rounding error.`,
+        what:`There are two effects. For an extreme rate, Legacy returns values at the int64 limit while Generator rejects the input. For a large but in-range rate, Generator shows inflated variance; the shared Poisson path also affects Legacy sampling.`,
+        why:`Both implementations draw a gamma rate and pass it to a Poisson sampler. The Legacy path has no pre-check for an unsafe Poisson rate, allowing integer saturation. Generator checks that range, but an allowed high rate can still inherit the Poisson acceptance-test rounding error.`,
         source:`Compare <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L179-L182" target="_blank" rel="noopener noreferrer">legacy_negative_binomial</a>, <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L616-L620" target="_blank" rel="noopener noreferrer">random_negative_binomial</a>, and the <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/_generator.pyx#L3215-L3240" target="_blank" rel="noopener noreferrer">Generator range check</a>.`
       },
       poisson: {
@@ -472,17 +446,11 @@ print("verdict: LATENT - real cancellation, but benign (returns the correct valu
         why:`Both APIs reach the same transformed-rejection routine. Its log-domain acceptance test computes <code>-λ + k log(λ) - log Γ(k+1)</code> from enormous rounded terms. Loss of the small differences between central and tail log probabilities changes which proposals survive, widening the distribution.`,
         source:`Both APIs call <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L575-L613" target="_blank" rel="noopener noreferrer">random_poisson_ptrs</a> for large λ; the acceptance comparison is near the end of that routine.`
       },
-      hypergeometric: {
-        apis:['Legacy'],
-        what:`A valid urn with <code>ngood = nbad = 2**62</code> and one draw is rejected by <code>RandomState</code>. <code>Generator</code> also rejects these numbers, but under its separate input-size limit.`,
-        why:`Legacy validation adds the two int64 population counts before checking the draw size. <code>2**62 + 2**62</code> overflows int64 and appears negative, making the valid urn fail validation. This case is integer overflow, not floating-point rounding.`,
-        source:`The overflowing check is in <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/mtrand.pyx#L3958-L3971" target="_blank" rel="noopener noreferrer">RandomState.hypergeometric</a>; <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/_generator.pyx#L3598-L3618" target="_blank" rel="noopener noreferrer">Generator.hypergeometric</a> has a separate magnitude check.`
-      },
       dirichlet: {
         apis:['Legacy'],
-        what:`With three concentration parameters of <code>2**-10</code>, <code>RandomState.dirichlet</code> produces NaN rows. <code>Generator.dirichlet</code> produces no NaN rows in this example.`,
-        why:`The legacy path draws three gamma values and divides each by their sum. Small-shape gamma draws can all underflow to zero, leaving a zero sum and a <code>0/0</code> normalization. For small alpha, <code>Generator</code> switches to a beta stick-breaking algorithm that avoids this division.`,
-        source:`Compare the <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/mtrand.pyx#L4548-L4562" target="_blank" rel="noopener noreferrer">legacy gamma normalization</a> with <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/_generator.pyx#L4538-L4612" target="_blank" rel="noopener noreferrer">Generator's small-alpha branch</a>.`
+        what:`With three concentration parameters of <code>2**-10</code>, Legacy dirichlet produces NaN rows. Generator dirichlet produces no NaN rows in this example.`,
+        why:`The Legacy path draws three gamma values and divides each by their sum. Small-shape gamma draws can all underflow to zero, leaving a zero sum and a <code>0/0</code> normalization. For small alpha, Generator switches to a beta stick-breaking algorithm that avoids this division.`,
+        source:`Compare the <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/mtrand.pyx#L4548-L4562" target="_blank" rel="noopener noreferrer">Legacy gamma normalization</a> with <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/_generator.pyx#L4538-L4612" target="_blank" rel="noopener noreferrer">Generator's small-alpha branch</a>.`
       },
       standard_t: {
         apis:['Legacy','Generator'],
@@ -494,7 +462,7 @@ print("verdict: LATENT - real cancellation, but benign (returns the correct valu
         apis:['Legacy','Generator'],
         what:`With shape <code>2**-12</code>, both APIs can return exact zero from <code>standard_gamma</code> and exact 0 or 1 from <code>beta</code>, even though the ideal distributions have open support.`,
         why:`For gamma shape below 1, both implementations evaluate a power like <code>U**(1/shape)</code>, which can underflow to zero. Small-shape beta sampling also involves powers and finite-precision endpoint rounding; <code>Generator.beta</code> uses its own Johnk-style branch, so its endpoint values are not simply inherited from gamma normalization.`,
-        source:`See the <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L47-L75" target="_blank" rel="noopener noreferrer">legacy gamma</a>, <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L220-L250" target="_blank" rel="noopener noreferrer">Generator gamma</a>, the <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L188-L224" target="_blank" rel="noopener noreferrer">legacy beta</a> branch, and the <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L411-L463" target="_blank" rel="noopener noreferrer">Generator beta</a> branch.`
+        source:`See the <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L47-L75" target="_blank" rel="noopener noreferrer">Legacy gamma</a>, <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L220-L250" target="_blank" rel="noopener noreferrer">Generator gamma</a>, the <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L188-L224" target="_blank" rel="noopener noreferrer">Legacy beta</a> branch, and the <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L411-L463" target="_blank" rel="noopener noreferrer">Generator beta</a> branch.`
       },
       noncentral_chisquare: {
         apis:['Legacy','Generator'],
@@ -504,30 +472,22 @@ print("verdict: LATENT - real cancellation, but benign (returns the correct valu
       },
       zipf: {
         apis:['Legacy'],
-        what:`Near <code>a = 1</code>, a large <code>RandomState.zipf</code> request can take impractically long. At very large <code>a</code>, the legacy rejection loop can fail to terminate; <code>Generator</code> has guards for these regimes.`,
-        why:`The legacy loop has no lower cutoff for uniform proposals, so near <code>a = 1</code> most proposed values exceed the int64 range and are retried. For <code>a ≥ 1025</code>, its power calculation overflows and the acceptance comparison can no longer succeed. <code>Generator</code> bounds the proposal range and handles very large <code>a</code> directly.`,
+        what:`Near <code>a = 1</code>, a large Legacy zipf request can take impractically long. At very large <code>a</code>, the Legacy rejection loop can fail to terminate; Generator has guards for these regimes.`,
+        why:`The Legacy loop has no lower cutoff for uniform proposals, so near <code>a = 1</code> most proposed values exceed the int64 range and are retried. For <code>a ≥ 1025</code>, its power calculation overflows and the acceptance comparison can no longer succeed. Generator bounds the proposal range and handles very large <code>a</code> directly.`,
         source:`Compare <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L428-L454" target="_blank" rel="noopener noreferrer">legacy_random_zipf</a> with <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L1010-L1040" target="_blank" rel="noopener noreferrer">random_zipf</a>.`
-      },
-      logseries: {
-        apis:['Legacy'],
-        what:`For extremely small <code>p</code>, <code>RandomState.logseries</code> returns only 1 in the displayed sample. This is a boundary observation, not a material distribution failure at those parameters.`,
-        why:`The legacy code computes <code>log(1 - p)</code>; when <code>1 - p</code> rounds to 1, that term becomes zero. The ideal probability of drawing 2 or more is only about <code>p/2</code>, so the observed point mass at 1 is overwhelmingly likely even without the cancellation.`,
-        source:`See <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L533-L555" target="_blank" rel="noopener noreferrer">legacy_logseries</a>.`
       }
     };
 
     const CASE_LABELS = {
       binomial:['Wrong distribution','Legacy draws collapse to zero despite an expected count of 16.'],
       geometric:['Impossible output','Legacy returns a negative integer outside the distribution’s support.'],
-      negative_binomial:['Wrong distribution','Extreme parameters can saturate legacy outputs; large in-range rates can inflate variance.'],
+      negative_binomial:['Wrong distribution','Extreme parameters can saturate Legacy outputs; large in-range rates can inflate variance.'],
       poisson:['Wrong distribution','At very large rates, the variance grows while the mean stays near its target.'],
-      hypergeometric:['Rejected input','An integer-overflow check rejects a mathematically valid large urn.'],
-      dirichlet:['Impossible output','Sparse concentration parameters can produce rows of NaNs in the legacy API.'],
+      dirichlet:['Impossible output','Sparse concentration parameters can produce rows of NaNs in the Legacy API.'],
       standard_t:['Impossible output','Small degrees of freedom can produce infinite values.'],
       gamma_beta:['Impossible output','Tiny shapes can underflow to exact zero or endpoint values.'],
       noncentral_chisquare:['Wrong distribution','A Poisson subroutine can carry variance inflation into chi-square draws.'],
-      zipf:['Non-termination','Some legacy parameters can make the rejection loop run indefinitely.'],
-      logseries:['Boundary case','Cancellation occurs, but the returned value remains effectively correct here.']
+      zipf:['Non-termination','Some Legacy parameters can make the rejection loop run indefinitely.']
     };
     function renderZoo() {
       const root = document.getElementById('zoo');
