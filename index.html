@@ -23,22 +23,14 @@
     nav { display:flex; gap:26px; font-size:14px; font-weight:600; }
     nav a { color:var(--muted); text-decoration:none; }
     nav a:hover { color:var(--green); text-decoration:underline; }
-    .hero { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(270px,.7fr); gap:70px; padding:92px 0 96px; align-items:end; }
     .kicker,.section-kicker { margin:0 0 18px; color:var(--green); font:600 12px/1.4 var(--mono); letter-spacing:.1em; text-transform:uppercase; }
     h1,h2,h3,p { margin-top:0; }
     h1 { max-width:850px; margin-bottom:28px; font-size:clamp(44px,6.3vw,78px); line-height:1.04; letter-spacing:-.055em; font-weight:600; }
     h2 { font-size:clamp(30px,4vw,46px); line-height:1.14; letter-spacing:-.04em; font-weight:600; margin-bottom:20px; }
     h3 { font-size:22px; line-height:1.25; letter-spacing:-.025em; margin-bottom:10px; }
-    .hero .lead { max-width:680px; font-size:21px; line-height:1.5; color:#34423c; margin-bottom:32px; }
-    .hero-actions { display:flex; gap:13px; flex-wrap:wrap; align-items:center; }
-    .button { display:inline-flex; align-items:center; justify-content:center; min-height:46px; padding:10px 19px; border:1px solid var(--green); border-radius:4px; background:var(--green); color:white; text-decoration:none; font-size:14px; font-weight:700; line-height:1.2; }
-    .button:hover { background:#0d4434; color:#fff; }
-    .button.secondary { background:transparent; color:var(--green); }
-    .button.secondary:hover { background:var(--green-light); }
-    .hero-note { border-top:3px solid var(--green); padding-top:20px; }
-    .hero-note .number { font:500 clamp(52px,7vw,82px)/1 var(--mono); letter-spacing:-.08em; color:var(--orange); margin-bottom:13px; }
-    .hero-note p { margin:0; font-size:15px; line-height:1.5; color:var(--muted); }
-    .hero-note strong { color:var(--ink); }
+    .case-intro { padding:76px 0 66px; }
+    .case-intro .lead { max-width:760px; font-size:21px; line-height:1.5; color:#34423c; margin-bottom:0; }
+    .case-block { border-top:1px solid var(--line); padding:66px 0 74px; }
     section.band { border-top:1px solid var(--line); padding:78px 0 86px; }
     .section-intro { max-width:760px; color:var(--muted); font-size:18px; }
     .figure-box { margin:34px 0 0; border:1px solid var(--line); background:var(--white); padding:20px; }
@@ -81,11 +73,7 @@
     .secondary-list article { border-top:2px solid var(--line); padding-top:18px; }
     .secondary-list h3 { font:600 16px var(--mono); }
     .secondary-list p { font-size:15px; color:var(--muted); margin-bottom:0; }
-    .scope { background:var(--green-light); border-top:1px solid #cedece; border-bottom:1px solid #cedece; padding:56px 0; }
-    .scope-inner { display:grid; grid-template-columns:1fr 1.4fr; gap:80px; }
-    .scope p { margin-bottom:0; color:#42574b; }
-    footer { padding:30px 0 60px; color:var(--muted); font-size:13px; }
-    footer .container { display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+    .zoo-scope { max-width:760px; color:var(--muted); font-size:15px; margin:32px 0 0; }
 
 
     .fp-analysis { border-top:3px solid var(--green); padding-top:21px; }
@@ -132,38 +120,29 @@
     .exhibit-output { display:none; margin:12px 0 0; max-height:330px; overflow:auto; white-space:pre-wrap; background:#14231d; color:#f3f7f0; padding:13px; font:12px/1.5 var(--mono); }
     .exhibit-output.show { display:block; }
     @media(max-width:750px) { .zoo-grid { grid-template-columns:1fr; } }
-    @media(max-width:850px) { .hero,.split,.scope-inner { grid-template-columns:1fr; gap:36px; } .hero { padding:65px 0; } .hero-note { max-width:400px; } .secondary-list { grid-template-columns:1fr; } }
-    @media(max-width:650px) { body { font-size:16px; } .container { width:min(100% - 32px,1120px); } nav { gap:18px; font-size:12px; } .header-inner { gap:10px; } section.band { padding:60px 0; } .hero .lead { font-size:18px; } .readout,.companions { grid-template-columns:1fr; } .readout > div + div { border-left:0; border-top:1px solid var(--line); } .demo { padding:21px; } .figure-box { padding:10px; overflow-x:auto; } .figure-box img { min-width:800px; } }
+    @media(max-width:850px) { .split { grid-template-columns:1fr; gap:36px; } .secondary-list { grid-template-columns:1fr; } }
+    @media(max-width:650px) { body { font-size:16px; } .container { width:min(100% - 32px,1120px); } nav { gap:18px; font-size:12px; } .header-inner { gap:10px; } .case-intro { padding:60px 0; } .case-intro .lead { font-size:18px; } .case-block,section.band { padding:60px 0; } .readout,.companions { grid-template-columns:1fr; } .readout > div + div { border-left:0; border-top:1px solid var(--line); } .demo { padding:21px; } .figure-box { padding:10px; overflow-x:auto; } .figure-box img { min-width:800px; } }
   </style>
 </head>
 <body>
   <header class="site-header">
     <div class="container header-inner">
       <nav aria-label="Main navigation">
-        <a href="#evidence">Highlight: Poisson</a>
+        <a href="#poisson">Poisson case study</a>
         <a href="#more">The zoo</a>
       </nav>
     </div>
   </header>
-  <main id="top">
-    <div class="container hero">
-      <div>
-        <h1>Sampler error zoo.</h1>
-        <p class="lead">A sampler can return the wrong distribution, an impossible value, or no value at all. Here are reproducible NumPy cases where finite precision or approximations change the result, with the code and source path for each one.</p>
-        <div class="hero-actions">
-          <a class="button" href="#more">Explore all 11 cases</a>
-          <a class="button secondary" href="#evidence">Start with Poisson</a>
-        </div>
+  <main>
+    <section id="poisson" aria-labelledby="poisson-title">
+      <div class="container case-intro">
+        <p class="kicker">Poisson case study</p>
+        <h1 id="poisson-title">Rounding error widens NumPy’s Poisson samples.</h1>
+        <p class="lead">At a very large rate, the sampler’s acceptance test loses the difference between central and tail counts. The mean remains close to the target, while the variance rises well above it.</p>
       </div>
-      <aside class="hero-note" aria-label="Guide to this catalog">
-        <div class="number">11</div>
-        <p><strong>NumPy sampler cases.</strong> Each card examines one NumPy sampler and shows how finite precision can jeopardize its intended distribution.</p>
-      </aside>
-    </div>
-
-    <section class="band" id="evidence">
+      <div class="case-block">
       <div class="container">
-        <p class="section-kicker">01 / What changes</p>
+        <p class="section-kicker">What changes</p>
         <h2>The mean looks fine. The spread does not.</h2>
         <p class="section-intro">For a Poisson distribution with rate λ, both the mean and variance equal λ. That gives us a direct check: draw many samples and divide their empirical variance by λ. The result should be close to 1.</p>
         <div class="readout" aria-label="Poisson variance comparison">
@@ -176,12 +155,12 @@
           <figcaption><strong>Measured variance inflation.</strong> The left plot is the central finding. The other two show NumPy distributions that use a Poisson draw internally. The dashed line marks the target ratio of 1.</figcaption>
         </figure>
       </div>
-    </section>
+      </div>
 
-    <section class="band" id="mechanism">
+      <div class="case-block">
       <div class="container split">
         <div>
-          <p class="section-kicker">02 / Why it happens</p>
+          <p class="section-kicker">Why it happens</p>
           <h2>Rounding error compromises the sampler’s internal decision.</h2>
           <p class="section-intro">At large λ, NumPy proposes a count <code>k</code> from a broader distribution, then uses an acceptance test to trim the tails back to a Poisson distribution. Some proposals take a fast accept path. For the others, the test needs the Poisson log probability of <code>k</code>.</p>
           <p class="section-intro">That log probability changes by only about 0.5 between a central count and one standard deviation into the tail. But NumPy computes it by subtracting terms near <code>10²⁰</code>. Rounding can erase the small difference, so the test no longer rejects tail proposals at the intended rate. The measured output is therefore too wide.</p>
@@ -201,12 +180,12 @@
           <a class="fp-source" href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L3180-L3233" target="_blank" rel="noopener noreferrer">Read NumPy’s accept/reject test →</a>
         </div>
       </div>
-    </section>
+      </div>
 
-    <section class="band" id="try">
+      <div class="case-block">
       <div class="container split">
         <div>
-          <p class="section-kicker">03 / Reproduce it</p>
+          <p class="section-kicker">Reproduce it</p>
           <h2>Run the measurement yourself.</h2>
           <p class="section-intro">This snippet samples NumPy’s <code>Generator.poisson</code>, then compares the measured variance with λ.</p>
           <p class="section-intro" style="font-size:15px">You can edit the code before running it. Results come from the connected Python backend, whose NumPy version is shown in the panel. Sampling is empirical, so the ratio varies slightly between runs and versions.</p>
@@ -234,26 +213,20 @@ print("mean error / standard deviation:",
           <p class="demo-foot">The hosted backend has a time limit. If it is asleep or unavailable, copy the snippet into a local Python environment with NumPy.</p>
         </div>
       </div>
+      </div>
     </section>
 
     <section class="band" id="more">
       <div class="container">
-        <p class="section-kicker">04 / The catalog</p>
-        <h2>Eleven cases. Several ways for a sampler to fail.</h2>
-        <p class="section-intro">Open any exhibit for the mechanism, NumPy source, and an editable reproduction. API tags identify the affected path in NumPy 2.4.3: Legacy means <code>RandomState</code> or <code>np.random.*</code>; Generator means <code>default_rng()</code>. “Boundary case” marks a numerical collapse without a meaningful failure in the shown regime.</p>
+        <p class="section-kicker">The zoo</p>
+        <h2>Eleven NumPy sampler cases.</h2>
+        <p class="section-intro">Each card examines one NumPy sampler and shows how finite precision can jeopardize its intended distribution. Open a card for its mechanism, NumPy source, and an editable reproduction. API tags identify the affected path in NumPy 2.4.3: Legacy means <code>RandomState</code> or <code>np.random.*</code>; Generator means <code>default_rng()</code>. “Boundary case” marks a numerical collapse without a meaningful failure in the shown regime.</p>
         <div class="zoo-key" aria-label="Case labels"><span>Wrong distribution</span><span>Impossible output</span><span>Rejected input</span><span>Non-termination</span><span>Boundary case</span></div>
         <div class="zoo-grid" id="zoo"></div>
-      </div>
-    </section>
-
-    <section class="scope" id="scope">
-      <div class="container scope-inner">
-        <div><p class="section-kicker">What this project covers</p><h2>Start with NumPy. Then examine the wider ecosystem.</h2></div>
-        <p>This catalog starts with NumPy because its implementations and runnable examples make the faults concrete. Other libraries may use different algorithms and thresholds, so each one needs its own source-level analysis.</p>
+        <p class="zoo-scope">This catalog starts with NumPy because its implementations and runnable examples make the faults concrete. Other libraries may use different algorithms and thresholds, so each one needs its own source-level analysis.</p>
       </div>
     </section>
   </main>
-  <footer><div class="container"><span>float/faults · Floating-point behavior in random samplers</span><span id="foot-version">NumPy backend status pending</span></div></footer>
   <script>
 const BUGS = [
   {
@@ -418,7 +391,6 @@ print("verdict: LATENT - real cancellation, but benign (returns the correct valu
     const BACKEND_URL = /^(localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(location.hostname)
       ? location.origin : 'https://sampler-fault-lab-backend.onrender.com';
     const version = document.getElementById('version');
-    const footVersion = document.getElementById('foot-version');
     const status = document.getElementById('status');
     const run = document.getElementById('run');
     const output = document.getElementById('output');
@@ -428,11 +400,9 @@ print("verdict: LATENT - real cancellation, but benign (returns the correct valu
         if (!response.ok) throw new Error('HTTP ' + response.status);
         const data = await response.json();
         version.textContent = 'NumPy ' + data.version + ' · connected';
-        footVersion.textContent = 'Live backend: NumPy ' + data.version;
         status.textContent = 'Ready to run';
       } catch (error) {
         version.textContent = 'Backend unavailable';
-        footVersion.textContent = 'Live backend unavailable';
         status.textContent = 'You can copy the code and run it locally';
       }
     }
