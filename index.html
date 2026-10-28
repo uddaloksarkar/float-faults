@@ -144,7 +144,7 @@
     <div class="container hero">
       <div>
         <h1>Sampler error zoo.</h1>
-        <p class="lead">A sampler implemented in finite precision can return samples from the wrong distribution. Below are reproducible cases in NumPy 2.4.3 where rounding or approximation changes the distribution a sampler is meant to draw from. Each case comes with runnable code and a link to the responsible source.</p>
+        <p class="lead">The core of sampling algorithms comes from theory that involves real numbers. Since computers only have finite precision, implementation and theory have differences, and they can be visibly big at times. Below are reproducible cases in NumPy 2.4.3 where rounding or approximation changes the distribution a sampler is meant to draw from. Each case comes with code you can run and a link to the responsible source.</p>
         <div class="hero-actions">
           <a class="button" href="#more">Explore all cases</a>
           <a class="button secondary" href="#poisson">Start with Poisson</a>
@@ -169,7 +169,7 @@
 
       <div class="split case-part">
         <div>
-          <h3>Rounding error compromises the sampler’s internal decision.</h3>
+          <h3>Rounding breaks the sampler’s accept/reject step.</h3>
           <p class="section-intro">At large λ, NumPy proposes an integer <code>k</code> from a hat distribution, then uses an acceptance test to convert the distribution of <code>k</code> back to a Poisson distribution. For some proposals, the test needs to evaluate the Poisson log probability of <code>k</code>.</p>
           <p class="section-intro">NumPy computes this log probability by subtracting terms near <code>10²⁰</code>. Rounding can make this subtraction return zero, considerably distorting the acceptance test.</p>
         </div>
