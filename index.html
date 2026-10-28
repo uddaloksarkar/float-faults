@@ -433,6 +433,9 @@ print("returned (unexpected)")`
       } finally { run.disabled = false; }
     });
 
+    function caseNumber(id) { return String(BUGS.findIndex(bug => bug.id === id) + 1).padStart(2,'0'); }
+    function caseRef(id) { return `<a href="#case-${id}">case ${caseNumber(id)}</a>`; }
+
     const CASE_DETAILS = {
       binomial: {
         apis:['Legacy'],
@@ -448,15 +451,15 @@ print("returned (unexpected)")`
       },
       negative_binomial: {
         apis:['Legacy','Generator'],
-        what:`There are two effects. For an extreme rate, Legacy returns values at the int64 limit while Generator rejects the input. For a large but in-range rate, Generator shows inflated variance; the shared Poisson path also affects Legacy sampling.`,
-        why:`Both implementations draw a gamma rate and pass it to a Poisson sampler. The Legacy path has no pre-check for an unsafe Poisson rate, allowing integer saturation. Generator checks that range, but an allowed high rate can still inherit the Poisson acceptance-test rounding error.`,
+        what:`There are two effects: (1) for an extreme rate, Legacy returns values at the int64 limit while Generator rejects the input; (2) for a large but in-range rate, Generator shows inflated variance.`,
+        why:`Both implementations draw a gamma rate and pass it to a Poisson sampler. The Legacy path has no pre-check for an unsafe Poisson rate, allowing integer saturation. Generator checks that range, but an allowed high rate can still inherit the Poisson acceptance-test rounding error (${caseRef('poisson')}).`,
         source:`Compare <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L179-L182" target="_blank" rel="noopener noreferrer">legacy_negative_binomial</a>, <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L616-L620" target="_blank" rel="noopener noreferrer">random_negative_binomial</a>, and the <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/_generator.pyx#L3215-L3240" target="_blank" rel="noopener noreferrer">Generator range check</a>.`
       },
       poisson: {
         apis:['Legacy','Generator'],
         what:`At <code>λ = 9 × 10¹⁸</code>, both APIs return samples whose mean is near λ but whose measured variance is about 1.65 times the Poisson target λ.`,
-        why:`Both APIs reach the same transformed-rejection routine. Its log-domain acceptance test computes <code>-λ + k log(λ) - log Γ(k+1)</code> from enormous rounded terms. Loss of the small differences between central and tail log probabilities changes which proposals survive, widening the distribution.`,
-        source:`Both APIs call <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L575-L613" target="_blank" rel="noopener noreferrer">random_poisson_ptrs</a> for large λ; the acceptance comparison is near the end of that routine.`
+        why:`Both APIs reach the same transformed-rejection routine. Its log-domain acceptance test computes <code>-λ + k log(λ) - log Γ(k+1)</code> from enormous rounded terms. The rounded negations can return zero, so the acceptance test cannot distinguish between central and tail proposals.`,
+        source:`Both APIs call <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L575-L613" target="_blank" rel="noopener noreferrer">random_poisson_ptrs</a> for large λ.`
       },
       dirichlet: {
         apis:['Legacy'],
@@ -485,7 +488,7 @@ print("returned (unexpected)")`
       noncentral_chisquare: {
         apis:['Legacy','Generator'],
         what:`For <code>df = 0.5</code> and large noncentrality, both APIs show variance above the noncentral chi-square target.`,
-        why:`When <code>df ≤ 1</code>, both implementations first draw a Poisson count with rate <code>nonc/2</code>, then use it to choose a chi-square degree of freedom. At a very large Poisson rate, acceptance-test rounding propagates into the final variance.`,
+        why:`When <code>df ≤ 1</code>, both implementations first draw a Poisson count with rate <code>nonc/2</code>, then use it to choose a chi-square degree of freedom. At a very large parameter <code>nonc</code>, the acceptance-test rounding propagates into the final variance (similar to ${caseRef('poisson')}).`,
         source:`See <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L119-L140" target="_blank" rel="noopener noreferrer">legacy_noncentral_chisquare</a> and <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L825-L841" target="_blank" rel="noopener noreferrer">random_noncentral_chisquare</a>.`
       },
       zipf: {
@@ -510,13 +513,13 @@ print("returned (unexpected)")`
     };
     function renderZoo() {
       const root = document.getElementById('zoo');
-      BUGS.forEach((bug, index) => {
+      BUGS.forEach(bug => {
         const card = document.createElement('article');
         card.className = 'exhibit' + (bug.id === 'poisson' ? ' featured' : '');
         card.id = 'case-' + bug.id;
         const [label, summary] = CASE_LABELS[bug.id];
         const detail = CASE_DETAILS[bug.id];
-        card.innerHTML = `<p class="exhibit-number">CASE ${String(index+1).padStart(2,'0')}</p>
+        card.innerHTML = `<p class="exhibit-number">CASE ${caseNumber(bug.id)}</p>
           <div class="exhibit-head"><h3>${bug.sampler}</h3><span class="exhibit-label">${label}</span></div>
           <div class="api-tags" aria-label="Affected NumPy APIs">${detail.apis.map(api => '<span class="api-tag">' + api + '</span>').join('')}</div>
           <p class="exhibit-summary">${summary}</p>
