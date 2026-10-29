@@ -481,8 +481,8 @@ print("returned (unexpected)")`
     const CASE_SUMMARIES = {
       binomial:'Legacy draws collapse to zero despite an expected count of 16.',
       geometric:'Legacy returns a negative integer outside the distribution’s support.',
-      negative_binomial:'Extreme parameters can saturate Legacy outputs; large in-range rates can inflate variance.',
-      poisson:'At very large rates, the variance grows while the mean stays near its target.',
+      negative_binomial:'Very large parameters can saturate Legacy outputs. For Generator API the large parameter values inflate variance.',
+      poisson:'At very large parameter values, the variance inflates beyond the actual Poisson variance.',
       dirichlet:'Sparse concentration parameters can produce rows of NaNs in the Legacy API.',
       standard_t:'Small degrees of freedom can produce infinite values.',
       standard_gamma:'Tiny gamma shapes can underflow to exact zero.',
