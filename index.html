@@ -166,7 +166,7 @@
       <div class="split case-part">
         <div>
           <h3>Rounding breaks the sampler’s accept/reject step.</h3>
-          <p class="section-intro">At large λ, NumPy proposes an integer <code>k</code> from a hat distribution, then uses an acceptance test to convert the distribution of <code>k</code> back to a Poisson distribution. For some proposals, the test needs to evaluate the Poisson log probability of <code>k</code>.</p>
+          <p class="section-intro">At large λ, NumPy proposes an integer <code>k</code> from a hat distribution, then uses an acceptance test to convert the distribution of <code>k</code> back to a Poisson distribution. For this, the test needs to evaluate the Poisson log probability of <code>k</code>.</p>
           <p class="section-intro">NumPy computes this log probability by subtracting terms near <code>10²⁰</code>. Rounding can make this subtraction return zero, considerably distorting the acceptance test.</p>
         </div>
         <div class="fp-analysis">
@@ -187,9 +187,9 @@
 
       <div class="split case-part">
         <div>
-          <h3>Run the measurement yourself.</h3>
+          <h3>Run it yourself.</h3>
           <p class="section-intro">This snippet samples NumPy’s <code>Generator.poisson</code>, then compares the measured variance with λ.</p>
-          <p class="section-intro" style="font-size:15px">You can edit the code before running it. Results come from the connected Python backend, whose NumPy version is shown in the panel. Sampling is empirical, so the ratio varies slightly between runs.</p>
+          <p class="section-intro" style="font-size:15px">You can edit the code before running it. Sampling is empirical, so the ratio varies slightly between runs.</p>
         </div>
         <div class="demo">
           <div class="demo-top"><span class="section-kicker">Live NumPy example</span><span class="version" id="version">Checking backend…</span></div>
