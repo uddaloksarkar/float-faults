@@ -238,29 +238,19 @@ x = np.random.default_rng(0).poisson(lam, 300000)
 d = (x - np.int64(int(lam))).astype(float)          # stable: |d| ~ std << lam
 print("[DISTORT] var/lam =", round(float(d.var()/lam),3), "(should be 1.0)")
 print("          mean bias / std =", round(float(d.mean()/lam**0.5),3), "(mean is correct)")
-print("[LATTICE] output grid spacing =", int(np.diff(np.unique(x)).min()),
-      " | ulp(lam) =", int(np.spacing(np.float64(lam))))
-print("verdict:", "BUG - variance inflated ~1.66x by PTRS cancellation (+ cosmetic 1024-lattice)")`
+print("verdict:", "BUG - variance inflated ~1.66x by PTRS cancellation")`
   },
   {
     id:"negative_binomial", sampler:"negative_binomial",
     timeout:15000,
     code:
 `import numpy as np
-imax, imin = np.iinfo(np.int64).max, np.iinfo(np.int64).min
-n, p = 1, 2.0**-62
-L = np.random.RandomState(1).negative_binomial(n, p, 5000)
-print("[RANGE] Legacy: min", L.min(), "max", L.max(), " #saturated to INT64 bound:", int(((L==imax)|(L==imin)).sum()))
-try:
-    np.random.default_rng(1).negative_binomial(n, p, 5000); print("        Generator: (no error)")
-except Exception as e:
-    print("        Generator raises:", type(e).__name__)
-# DISTORT: tight gamma -> ~Poisson(mean); inherits PTRS inflation
+# tight gamma -> ~Poisson(mean); inherits PTRS inflation
 mt = 1e17; nn = 1e6*mt; pp = nn/(nn+mt)
 mean, var = nn*(1-pp)/pp, nn*(1-pp)/pp**2
 x = np.random.default_rng(0).negative_binomial(nn, pp, 300000)
-print("[DISTORT] mean=1e17: var/theory =", round(float(((x-mean).var())/var),3), "(should be 1.0)")
-print("verdict:", "BUG - Legacy int64 saturation + inherited PTRS variance inflation")`
+print("mean=1e17: var/theory =", round(float(((x-mean).var())/var),3), "(should be 1.0)")
+print("verdict:", "BUG - variance inflated (inherited from PTRS Poisson)")`
   },
   {
     id:"noncentral_chisquare", sampler:"noncentral_chisquare",
@@ -309,7 +299,9 @@ for name, rng in [("Legacy", np.random.RandomState(1)),
                   ("Generator", np.random.default_rng(1))]:
     g = rng.standard_gamma(a, 50000)
     print(name, "gamma exact zero:", int((g == 0).sum()), "/ 50000")
-print("cause: small-shape power underflows to zero")`
+from math import gamma, log
+print("true P(X < 5e-324) =", round(float(np.exp(a*log(5e-324))/gamma(a+1)), 4))
+print("cause: U**(1/a) underflows; zeros match the true mass below the smallest double")`
   },
   {
     id:"beta", sampler:"beta",
@@ -419,7 +411,7 @@ print("returned (unexpected)")`
       binomial: {
         apis:['Legacy'],
         what:`With <code>p = 2**-54</code> and <code>n = 16 × 2**54</code>, Legacy binomial returns 0 on every draw although the expected count is 16. Generator returns a mean near 16 in NumPy 2.4.3.`,
-        why:`The Legacy inversion first rounds <code>1 - p</code> to 1 in binary64. It then computes <code>exp(n log(1 - p)) = 1</code> for the zero-count probability, so every uniform draw passes the zero-count test. Generator uses <code>log1p(-p)</code> and retains the small probability.`,
+        why:`The Legacy inversion first rounds <code>1 - p</code> to 1 in binary64. It then computes <code>exp(n log(1 - p)) = 1</code> for the zero-count probability, so every uniform draw passes the test of binomial inversion. Generator uses <code>log1p(-p)</code> and retains the small probability.`,
         source:`Compare <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L231-L265" target="_blank" rel="noopener noreferrer">legacy_random_binomial_inversion</a> with <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L765-L795" target="_blank" rel="noopener noreferrer">random_binomial_inversion</a>.`
       },
       geometric: {
@@ -430,9 +422,9 @@ print("returned (unexpected)")`
       },
       negative_binomial: {
         apis:['Legacy','Generator'],
-        what:`There are two effects: (1) for an extreme rate, Legacy returns values at the int64 limit while Generator rejects the input; (2) for a large but in-range rate, Generator shows inflated variance.`,
-        why:`Both implementations draw a gamma rate and pass it to a Poisson sampler. The Legacy path has no pre-check for an unsafe Poisson rate, allowing integer saturation. Generator checks that range, but an allowed high rate can still inherit the Poisson acceptance-test rounding error (${caseRef('poisson')}).`,
-        source:`Compare <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L179-L182" target="_blank" rel="noopener noreferrer">legacy_negative_binomial</a>, <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L616-L620" target="_blank" rel="noopener noreferrer">random_negative_binomial</a>, and the <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/_generator.pyx#L3215-L3240" target="_blank" rel="noopener noreferrer">Generator range check</a>.`
+        what:`With mean <code>10¹⁷</code> and a large <code>n</code>, Generator negative_binomial returns samples whose variance is well above the negative binomial target.`,
+        why:`Generator draws a gamma rate and passes it to a Poisson sampler. With a large <code>n</code>, the gamma rate concentrates near the mean, so the result is effectively a Poisson draw at a very high rate and inherits the Poisson acceptance-test rounding error (${caseRef('poisson')}).`,
+        source:`See <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L616-L620" target="_blank" rel="noopener noreferrer">random_negative_binomial</a>.`
       },
       poisson: {
         apis:['Legacy','Generator'],
@@ -454,8 +446,8 @@ print("returned (unexpected)")`
       },
       standard_gamma: {
         apis:['Legacy','Generator'],
-        what:`With shape <code>2**-12</code>, both APIs return exact zero from <code>standard_gamma</code>, although the mathematical gamma distribution has support on positive real numbers.`,
-        why:`For shape below one, both implementations use a power factor like <code>U**(1/shape)</code>. At this shape, many positive results lie below the smallest representable positive binary64 value and round to zero. This gamma underflow also matters to samplers that consume gamma draws, including Student t and Legacy dirichlet.`,
+        what:`With shape <code>2**-12</code>, about 83% of <code>standard_gamma</code> draws are exactly zero in both APIs, although the gamma distribution has support on the positive reals.`,
+        why:`With shape <code>2**-12</code>, both implementations return <code>U**(1/shape)</code>, here <code>U**4096</code>, which rounds to zero whenever <code>U &lt; 0.834</code>. This matches the true distribution: about 83% of its mass lies below the smallest positive binary64 value, <code>4.9 × 10⁻³²⁴</code>. Therefore no binary64 sampler can avoid this scenario. The harm is downstream: samplers that use gamma draws, turn these zeros into infinities (${caseRef('standard_t')}) or <code>0/0</code> NaNs (${caseRef('dirichlet')}).`,
         source:`See <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/legacy/legacy-distributions.c#L47-L75" target="_blank" rel="noopener noreferrer">Legacy gamma</a> and <a href="https://github.com/numpy/numpy/blob/v2.4.3/numpy/random/src/distributions/distributions.c#L220-L250" target="_blank" rel="noopener noreferrer">Generator gamma</a>.`
       },
       beta: {
@@ -481,11 +473,11 @@ print("returned (unexpected)")`
     const CASE_SUMMARIES = {
       binomial:'Legacy draws collapse to zero despite an expected count of 16.',
       geometric:'Legacy returns a negative integer outside the distribution’s support.',
-      negative_binomial:'Very large parameters can saturate Legacy outputs. For Generator API the large parameter values inflate variance.',
+      negative_binomial:'At very large parameter values, the variance inflates beyond the actual negative binomial variance.',
       poisson:'At very large parameter values, the variance inflates beyond the actual Poisson variance.',
       dirichlet:'Sparse concentration parameters can produce rows of NaNs in the Legacy API.',
       standard_t:'Small degrees of freedom can produce infinite values.',
-      standard_gamma:'Tiny gamma shapes can underflow to exact zero.',
+      standard_gamma:'Tiny gamma shapes return exact zero for most draws, which breaks samplers that divide by them.',
       beta:'Tiny beta shapes can round to endpoints 0 or 1.',
       noncentral_chisquare:'A Poisson subroutine can carry variance inflation into chi-square draws.',
       zipf:'Some Legacy parameters can make the rejection loop run indefinitely.'
