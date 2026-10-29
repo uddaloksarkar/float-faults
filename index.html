@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A catalog of reproducible numerical faults in NumPy random samplers, with explanations and runnable examples.">
+  <meta name="description" content="Ten NumPy sampler cases showing how finite-precision arithmetic can change the distribution of computed draws, with source and runnable examples.">
   <title>Sampler Error Zoo — Floating-point faults in NumPy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -97,15 +97,11 @@
     .fp-analysis .fp-scale-note { font-size:14px; }
     .fp-analysis .fp-caveat { border-left:3px solid var(--orange); padding-left:15px; color:var(--muted); font-size:13px; }
     .fp-source { font:600 13px var(--mono); }
-    .zoo-key { display:flex; flex-wrap:wrap; gap:8px; margin:26px 0 22px; }
-    .zoo-key span { font:500 11px var(--mono); border:1px solid var(--line); color:var(--muted); padding:5px 8px; background:var(--white); }
     .zoo-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
     .exhibit { background:var(--white); border:1px solid var(--line); padding:25px; min-width:0; }
     .exhibit.featured { border-top:4px solid var(--orange); }
-    .exhibit-head { display:flex; gap:12px; align-items:start; justify-content:space-between; }
     .exhibit-number { font:600 12px var(--mono); color:var(--green); margin:0 0 11px; }
     .exhibit h3 { overflow-wrap:anywhere; font:600 18px/1.35 var(--mono); letter-spacing:-.025em; margin:0 0 12px; }
-    .exhibit-label { flex:none; max-width:142px; text-align:right; color:var(--orange); font:600 11px/1.4 var(--mono); }
     .api-tags { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 13px; }
     .api-tag { display:inline-block; padding:3px 7px; background:var(--green-light); color:var(--green); border:1px solid #c9d9ce; font:600 11px var(--mono); }
     .exhibit-summary { color:#34423c; font-size:16px; margin:0 0 16px; }
@@ -144,7 +140,7 @@
     <div class="container hero">
       <div>
         <h1>Sampler error zoo.</h1>
-        <p class="lead">The core of sampling algorithms comes from theory that involves real numbers. Since computers only have finite precision, implementation and theory have differences, and they can be visibly big at times. Below are reproducible cases in NumPy 2.4.3 where rounding or approximation changes the distribution a sampler is meant to draw from. Each case comes with code you can run and a link to the responsible source.</p>
+        <p class="lead">NumPy implements mathematical distributions with bounded integers and rounded floating-point arithmetic. Across all parameters, exact agreement with the ideal laws is impossible at fixed precision. These ten cases show where finite-precision effects change probabilities, produce values outside mathematical support, or prevent a sampler from returning. Each includes runnable code and NumPy source.</p>
         <div class="hero-actions">
           <a class="button" href="#more">Explore all cases</a>
           <a class="button secondary" href="#poisson">Start with Poisson</a>
@@ -225,8 +221,7 @@ print("mean error / standard deviation:",
       <div class="container">
         <p class="section-kicker">The zoo</p>
         <h2>Ten NumPy sampler cases.</h2>
-        <p class="section-intro">Open a card for the failure, NumPy source, and runnable code. <a href="https://numpy.org/doc/stable/reference/random/legacy.html" target="_blank" rel="noopener noreferrer">Legacy</a> covers <code>RandomState</code> and module-level draws such as <code>np.random.poisson(...)</code>; <a href="https://numpy.org/doc/stable/reference/random/generator.html" target="_blank" rel="noopener noreferrer">Generator</a> comes from <code>default_rng</code>. Their sampling algorithms can differ. Tags show which interface is affected in NumPy 2.4.3.</p>
-        <div class="zoo-key" aria-label="Sampler failure modes"><span>Distorted frequencies</span><span>Out-of-support value</span><span>Non-termination</span></div>
+        <p class="section-intro">Open a card for the numerical failure, NumPy source, and runnable code. <a href="https://numpy.org/doc/stable/reference/random/legacy.html" target="_blank" rel="noopener noreferrer">Legacy</a> covers <code>RandomState</code> and module-level draws such as <code>np.random.poisson(...)</code>; <a href="https://numpy.org/doc/stable/reference/random/generator.html" target="_blank" rel="noopener noreferrer">Generator</a> comes from <code>default_rng</code>. Their sampling algorithms can differ. The Legacy and Generator labels show which interface is affected in NumPy 2.4.3.</p>
         <div class="zoo-grid" id="zoo"></div>
       </div>
     </section>
@@ -483,17 +478,17 @@ print("returned (unexpected)")`
       }
     };
 
-    const CASE_LABELS = {
-      binomial:['Distorted frequencies','Legacy draws collapse to zero despite an expected count of 16.'],
-      geometric:['Out-of-support value','Legacy returns a negative integer outside the distribution’s support.'],
-      negative_binomial:['Distorted frequencies','Extreme parameters can saturate Legacy outputs; large in-range rates can inflate variance.'],
-      poisson:['Distorted frequencies','At very large rates, the variance grows while the mean stays near its target.'],
-      dirichlet:['Out-of-support value','Sparse concentration parameters can produce rows of NaNs in the Legacy API.'],
-      standard_t:['Out-of-support value','Small degrees of freedom can produce infinite values.'],
-      standard_gamma:['Out-of-support value','Tiny gamma shapes can underflow to exact zero.'],
-      beta:['Out-of-support value','Tiny beta shapes can round to endpoints 0 or 1.'],
-      noncentral_chisquare:['Distorted frequencies','A Poisson subroutine can carry variance inflation into chi-square draws.'],
-      zipf:['Non-termination','Some Legacy parameters can make the rejection loop run indefinitely.']
+    const CASE_SUMMARIES = {
+      binomial:'Legacy draws collapse to zero despite an expected count of 16.',
+      geometric:'Legacy returns a negative integer outside the distribution’s support.',
+      negative_binomial:'Extreme parameters can saturate Legacy outputs; large in-range rates can inflate variance.',
+      poisson:'At very large rates, the variance grows while the mean stays near its target.',
+      dirichlet:'Sparse concentration parameters can produce rows of NaNs in the Legacy API.',
+      standard_t:'Small degrees of freedom can produce infinite values.',
+      standard_gamma:'Tiny gamma shapes can underflow to exact zero.',
+      beta:'Tiny beta shapes can round to endpoints 0 or 1.',
+      noncentral_chisquare:'A Poisson subroutine can carry variance inflation into chi-square draws.',
+      zipf:'Some Legacy parameters can make the rejection loop run indefinitely.'
     };
     function renderZoo() {
       const root = document.getElementById('zoo');
@@ -501,10 +496,10 @@ print("returned (unexpected)")`
         const card = document.createElement('article');
         card.className = 'exhibit' + (bug.id === 'poisson' ? ' featured' : '');
         card.id = 'case-' + bug.id;
-        const [label, summary] = CASE_LABELS[bug.id];
+        const summary = CASE_SUMMARIES[bug.id];
         const detail = CASE_DETAILS[bug.id];
         card.innerHTML = `<p class="exhibit-number">CASE ${caseNumber(bug.id)}</p>
-          <div class="exhibit-head"><h3>${bug.sampler}</h3><span class="exhibit-label">${label}</span></div>
+          <h3>${bug.sampler}</h3>
           <div class="api-tags" aria-label="Affected NumPy APIs">${detail.apis.map(api => '<span class="api-tag">' + api + '</span>').join('')}</div>
           <p class="exhibit-summary">${summary}</p>
           <details><summary>Inspect and reproduce</summary><div class="exhibit-body">
